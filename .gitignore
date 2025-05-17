@@ -1,0 +1,35 @@
+# Ignore IDE stuff
+.vscode/
+.idea/
+
+# Ignore executable files
+.build/
+.builder/
+.env
+
+# Ignore build artifacts
+node_modules/
+dist/
+tmp/
+bin/
+
+# Ignore mock files
+**/mock.go
+**/mock
+
+# Ignore generated files
+**gen.go
+
+# Ignore repository because it generated
+repository/
+
+# Ignore docs
+docs/
+
+# Ignore coverage reports
+*.log
+*.log.*
+*.log-*
+*.log/*
+*.log-/*
+*.log-*/

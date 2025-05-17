@@ -1,0 +1,80 @@
+name: Go CI/CD
+
+on:
+  push:
+    branches: [ main, next ]
+  pull_request:
+    branches: [ main, next ]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Generate code
+        run: make generate && make generate.mock
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run tests with coverage
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Generate code
+        run: make generate
+
+      - name: Build
+        run: go build -v ./...
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+            registry: ghcr.io
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v6
+        with:
+            context: .
+            push: true
+            platforms: linux/amd64,linux/arm64
+            tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.sha }}

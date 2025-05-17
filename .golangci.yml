@@ -1,0 +1,30 @@
+# Enable linters
+linters:
+  enable:
+    - errcheck
+    - gofmt
+    - staticcheck
+    - containedctx
+    - revive
+    - err113
+    - errchkjson
+    - errorlint
+    - forbidigo
+    - forcetypeassert
+    - gocritic
+    - interfacebloat
+    - intrange
+    - misspell
+    - mnd
+    - nakedret
+    - nestif
+    - nilnil
+    - nlreturn
+    - nosprintfhostport
+    - perfsprint
+    - prealloc
+    - stylecheck
+    - wsl
+
+run:
+  tests: false
