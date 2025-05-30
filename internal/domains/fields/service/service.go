@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/savioruz/goth/config"
 	"github.com/savioruz/goth/internal/domains/fields/dto"
 	"github.com/savioruz/goth/internal/domains/fields/repository"
@@ -74,12 +73,12 @@ func (s *fieldService) Create(ctx context.Context, req dto.FieldCreateRequest) (
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		err := s.cache.Pipeline().
-			Delete(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "count")).
-			Clear(ctx, helper.BuildCacheKey(cacheGetFieldKey, "*")).
-			Exec(ctx)
-		if err != nil {
-			s.logger.Error(identifier, "create - failed clear cache: %w", err)
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "count")); err != nil {
+			s.logger.Error(identifier, "create - failed to delete cache: %w", err)
+		}
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "*")); err != nil {
+			s.logger.Error(identifier, "create - failed to clear cache: %w", err)
 		}
 	}()
 
@@ -340,7 +339,7 @@ func (s *fieldService) Update(ctx context.Context, id string, req dto.FieldUpdat
 		case "type":
 			existingField.Type = field.Interface().(string)
 		case "price":
-			existingField.Price = field.Interface().(pgtype.Numeric)
+			existingField.Price = helper.PgInt64(field.Int())
 		case "description":
 			existingField.Description = helper.PgString(field.Interface().(string))
 		}
@@ -374,13 +373,16 @@ func (s *fieldService) Update(ctx context.Context, id string, req dto.FieldUpdat
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		err := s.cache.Pipeline().
-			Delete(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "count")).
-			Delete(ctx, helper.BuildCacheKey(cacheGetFieldKey, id)).
-			Clear(ctx, helper.BuildCacheKey(cacheGetFieldKey, "*")).
-			Exec(ctx)
-		if err != nil {
-			s.logger.Error(identifier, "update - failed clear cache: %w", err)
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "count")); err != nil {
+			s.logger.Error(identifier, "update - failed to delete cache: %w", err)
+		}
+
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldKey, id)); err != nil {
+			s.logger.Error(identifier, "update - failed to delete cache: %w", err)
+		}
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "*")); err != nil {
+			s.logger.Error(identifier, "update - failed to clear cache: %w", err)
 		}
 	}()
 
@@ -404,13 +406,16 @@ func (s *fieldService) Delete(ctx context.Context, id string) (res string, err e
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		err := s.cache.Pipeline().
-			Delete(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "count")).
-			Delete(ctx, helper.BuildCacheKey(cacheGetFieldKey, id)).
-			Clear(ctx, helper.BuildCacheKey(cacheGetFieldKey, "*")).
-			Exec(ctx)
-		if err != nil {
-			s.logger.Error(identifier, "delete - failed clear cache: %w", err)
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "count")); err != nil {
+			s.logger.Error(identifier, "delete - failed to delete cache: %w", err)
+		}
+
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldKey, id)); err != nil {
+			s.logger.Error(identifier, "delete - failed to delete cache: %w", err)
+		}
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "*")); err != nil {
+			s.logger.Error(identifier, "delete - failed to clear cache: %w", err)
 		}
 	}()
 

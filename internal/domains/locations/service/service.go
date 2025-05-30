@@ -70,12 +70,12 @@ func (s *locationService) Create(ctx context.Context, req dto.CreateLocationRequ
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		err := s.cache.Pipeline().
-			Delete(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "count")).
-			Clear(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "*")).
-			Exec(ctx)
-		if err != nil {
-			s.logger.Error(identifier, "create - failed clear cache: %w", err)
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "count")); err != nil {
+			s.logger.Error(identifier, "create - failed to delete cache for count: %w", err)
+		}
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "*")); err != nil {
+			s.logger.Error(identifier, "create - failed to clear cache: %w", err)
 		}
 	}()
 
@@ -267,13 +267,16 @@ func (s *locationService) Update(ctx context.Context, id string, req dto.UpdateL
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		err := s.cache.Pipeline().
-			Delete(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "count")).
-			Delete(ctx, helper.BuildCacheKey(cacheGetLocationKey, id)).
-			Clear(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "*")).
-			Exec(ctx)
-		if err != nil {
-			s.logger.Error(identifier, "update - failed clear cache: %w", err)
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "count")); err != nil {
+			s.logger.Error(identifier, "update - failed to delete cache for count: %w", err)
+		}
+
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetLocationKey, id)); err != nil {
+			s.logger.Error(identifier, "update - failed to delete cache for location %s: %w", id, err)
+		}
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "*")); err != nil {
+			s.logger.Error(identifier, "update - failed to clear cache: %w", err)
 		}
 	}()
 
@@ -297,13 +300,16 @@ func (s *locationService) Delete(ctx context.Context, id string) (res string, er
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		err := s.cache.Pipeline().
-			Delete(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "count")).
-			Delete(ctx, helper.BuildCacheKey(cacheGetLocationKey, id)).
-			Clear(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "*")).
-			Exec(ctx)
-		if err != nil {
-			s.logger.Error(identifier, "delete - failed clear cache: %w", err)
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "count")); err != nil {
+			s.logger.Error(identifier, "delete - failed to delete cache for count: %w", err)
+		}
+
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetLocationKey, id)); err != nil {
+			s.logger.Error(identifier, "delete - failed to delete cache for location %s: %w", id, err)
+		}
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "*")); err != nil {
+			s.logger.Error(identifier, "delete - failed to clear cache: %w", err)
 		}
 	}()
 
