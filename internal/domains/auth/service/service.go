@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/savioruz/goth/pkg/constant"
 	"github.com/savioruz/goth/pkg/failure"
 	"github.com/savioruz/goth/pkg/logger"
 	"github.com/savioruz/goth/pkg/postgres"
@@ -74,7 +75,7 @@ func (s *authService) Register(ctx context.Context, req dto.UserRegisterRequest)
 			String: string(password),
 			Valid:  true,
 		},
-		Level: "1",
+		Level: constant.UserRoleUser,
 		FullName: pgtype.Text{
 			String: req.Name,
 			Valid:  true,
