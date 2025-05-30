@@ -41,9 +41,9 @@ generate.domains: ### domains=$DOMAIN (generate domains including sqlc.yaml)
 		@echo "    queries: \"./queries.sql\"" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
 		@echo "    gen:" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
 		@echo "      go:" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
-		@echo "        package: \"sqlc\"" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
+		@echo "        package: \"repository\"" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
 		@echo "        sql_package: \"pgx/v5\"" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
-		@echo "        out: \"./sqlc\"" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
+		@echo "        out: \"../../../../internal/domains/$(domains)/repository\"" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
 		@echo "        emit_json_tags: true" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
 		@echo "        emit_db_tags: true" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
 		@echo "        emit_methods_with_db_argument: true" >> $(DB_PATH)/domains/$(domains)/sqlc.yaml
@@ -149,6 +149,10 @@ migrate.force: ### force migration
 lint: ### check by golangci linter
 	$(LOCAL_BIN)/golangci-lint run
 .PHONY: linter-golangci
+
+lint.fix: ### fix by golangci linter
+	$(LOCAL_BIN)/golangci-lint run --fix
+.PHONY: lint.fix
 
 test: generate generate.mock ### run test
 	@if ! -d ./tmp ]; then \

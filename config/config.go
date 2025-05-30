@@ -43,6 +43,7 @@ type (
 		Password string `env:"PG_PASSWORD"`
 		Dbname   string `env:"PG_DATABASE,required"`
 		SSLMode  string `env:"PG_SSLMODE,required"`
+		Timezone string `env:"PG_TIMEZONE,required"`
 	}
 
 	Redis struct {

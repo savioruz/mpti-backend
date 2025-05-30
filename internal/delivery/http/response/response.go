@@ -9,12 +9,25 @@ type Data[T any] struct {
 	Data T `json:"data,omitempty"`
 }
 
+type Message struct {
+	Message string `json:"message"`
+}
+
 type Error struct {
 	Error *string `json:"error,omitempty"`
 }
 
 func WithJSON(ctx *fiber.Ctx, code int, payload interface{}) error {
 	err := response(ctx, code, Data[any]{Data: payload})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func WithMessage(ctx *fiber.Ctx, code int, message string) error {
+	err := response(ctx, code, Message{message})
 	if err != nil {
 		return err
 	}

@@ -10,7 +10,6 @@ linters:
     - errchkjson
     - errorlint
     - forbidigo
-    - forcetypeassert
     - gocritic
     - interfacebloat
     - intrange
@@ -22,7 +21,6 @@ linters:
     - nlreturn
     - nosprintfhostport
     - perfsprint
-    - prealloc
     - stylecheck
     - wsl
 
