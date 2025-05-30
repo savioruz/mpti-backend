@@ -28,13 +28,7 @@ func CheckRole(allowedRoles ...string) fiber.Handler {
 	}
 }
 
-// AdminOnly protects routes with JWT and Role check for admin role.
+// AdminOnly protects routes for admin role.
 func AdminOnly() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		if err := Jwt()(c); err != nil {
-			return err
-		}
-
-		return CheckRole(constant.UserRoleAdmin)(c)
-	}
+	return CheckRole(constant.UserRoleAdmin)
 }
