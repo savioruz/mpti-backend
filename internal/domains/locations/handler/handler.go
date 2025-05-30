@@ -91,7 +91,6 @@ func (h *Handler) Create(ctx *fiber.Ctx) error {
 // @Failure 400 {object} response.Error
 // @Failure 500 {object} response.Error
 // @Router /locations/{id} [get]
-// @Security BearerAuth
 func (h *Handler) Get(ctx *fiber.Ctx) error {
 	id := ctx.Params("id")
 	if id == "" {
@@ -131,7 +130,6 @@ func (h *Handler) Get(ctx *fiber.Ctx) error {
 // @Failure 400 {object} response.Error
 // @Failure 500 {object} response.Error
 // @Router /locations/ [get]
-// @Security BearerAuth
 func (h *Handler) GetAll(ctx *fiber.Ctx) error {
 	var req gdto.PaginationRequest
 	if err := ctx.QueryParser(&req); err != nil {
