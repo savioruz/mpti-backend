@@ -10,7 +10,7 @@ x-db-environment: &x-db-environment
 
 x-backend-app-environment: &x-backend-app-environment
   # App
-  APP_NAME: ${APP_NAME:-goth}
+  APP_NAME: ${APP_NAME:-mpti-backend}
   APP_VERSION: ${APP_VERSION:-1.0.0}
   # HTTP settings
   HTTP_PORT: ${HTTP_PORT:-3000}
@@ -23,6 +23,7 @@ x-backend-app-environment: &x-backend-app-environment
   PG_PASSWORD: ${PG_PASSWORD:-postgres}
   PG_DATABASE: ${PG_DATABASE:-goth}
   PG_SSLMODE: ${PG_SSLMODE:-disable}
+  PG_TIMEZONE: ${PG_TIMEZONE:-Asia/Jakarta}
   PG_POOL_MAX: ${PG_POOL_MAX:-10}
   # Redis
   REDIS_HOST: ${REDIS_HOST:-redis}
