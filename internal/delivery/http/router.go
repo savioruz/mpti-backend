@@ -6,12 +6,22 @@ import (
 	"github.com/savioruz/goth/config"
 	_ "github.com/savioruz/goth/docs" // Swagger docs
 	authHandler "github.com/savioruz/goth/internal/domains/auth/handler"
+	fieldHandler "github.com/savioruz/goth/internal/domains/fields/handler"
+	locationHandler "github.com/savioruz/goth/internal/domains/locations/handler"
 	oauthHandler "github.com/savioruz/goth/internal/domains/oauth/handler"
 	userHandler "github.com/savioruz/goth/internal/domains/user/handler"
 
 	"github.com/savioruz/goth/internal/delivery/http/middleware"
 	"github.com/savioruz/goth/pkg/logger"
 )
+
+type Handlers struct {
+	Auth     *authHandler.Handler
+	OAuth    *oauthHandler.Handler
+	User     *userHandler.Handler
+	Location *locationHandler.Handler
+	Field    *fieldHandler.Handler
+}
 
 // NewRouter initializes the HTTP router and registers the routes for the application.
 // Swagger spec:
@@ -24,9 +34,7 @@ func NewRouter(
 	app *fiber.App,
 	cfg *config.Config,
 	l logger.Interface,
-	authHandler *authHandler.Handler,
-	oauthHandler *oauthHandler.Handler,
-	userHandler *userHandler.Handler,
+	handlers Handlers,
 ) {
 	// Options
 	app.Use(middleware.Logger(l))
@@ -39,9 +47,11 @@ func NewRouter(
 
 	apiV1Group := app.Group("/v1")
 	{
-		authHandler.RegisterRoutes(apiV1Group)
-		oauthHandler.RegisterRoutes(apiV1Group)
-		userHandler.RegisterRoutes(apiV1Group)
+		handlers.Auth.RegisterRoutes(apiV1Group)
+		handlers.OAuth.RegisterRoutes(apiV1Group)
+		handlers.User.RegisterRoutes(apiV1Group)
+		handlers.Location.RegisterRoutes(apiV1Group)
+		handlers.Field.RegisterRoutes(apiV1Group)
 	}
 
 	app.Use("*", func(c *fiber.Ctx) error {
