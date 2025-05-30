@@ -28,16 +28,18 @@ func New(s service.LocationService, l logger.Interface, v *validator.Validate) *
 
 const (
 	identifier = "http - location - %s"
+
+	routePath = "/locations"
 )
 
 func (h *Handler) RegisterRoutes(r fiber.Router) {
-	location := r.Group("/locations")
+	locations := r.Group(routePath)
 
-	location.Post("/", middleware.AdminOnly(), h.Create)
-	location.Get("/:id", h.Get)
-	location.Get("/", h.GetAll)
-	location.Patch("/:id", middleware.AdminOnly(), h.Update)
-	location.Delete("/:id", middleware.AdminOnly(), h.Delete)
+	locations.Post("/", middleware.Jwt(), middleware.AdminOnly(), h.Create)
+	locations.Get("/:id", h.Get)
+	locations.Get("/", h.GetAll)
+	locations.Patch("/:id", middleware.Jwt(), middleware.AdminOnly(), h.Update)
+	locations.Delete("/:id", middleware.Jwt(), middleware.AdminOnly(), h.Delete)
 }
 
 // Create Location godoc

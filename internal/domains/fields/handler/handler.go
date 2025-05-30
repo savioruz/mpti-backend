@@ -28,18 +28,20 @@ func New(s service.FieldService, l logger.Interface, v *validator.Validate) *Han
 
 const (
 	identifier = "http - field - %s"
+
+	routePath = "/fields"
 )
 
 func (h *Handler) RegisterRoutes(r fiber.Router) {
-	field := r.Group("/fields")
+	fields := r.Group(routePath)
 
-	field.Post("/", middleware.AdminOnly(), h.Create)
-	field.Get("/:id", h.Get)
-	field.Get("/", h.GetAll)
-	field.Patch("/:id", middleware.AdminOnly(), h.Update)
-	field.Delete("/:id", middleware.AdminOnly(), h.Delete)
+	fields.Post("/", middleware.Jwt(), middleware.AdminOnly(), h.Create)
+	fields.Get("/:id", h.Get)
+	fields.Get("/", h.GetAll)
+	fields.Patch("/:id", middleware.Jwt(), middleware.AdminOnly(), h.Update)
+	fields.Delete("/:id", middleware.Jwt(), middleware.AdminOnly(), h.Delete)
 
-	r.Group("/locations").Get("/:location_id/fields", h.GetByLocationID)
+	r.Get("/locations/:location_id/fields", h.GetByLocationID)
 }
 
 // Create Field godoc
