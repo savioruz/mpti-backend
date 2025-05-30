@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"github.com/savioruz/goth/pkg/constant"
 	"github.com/savioruz/goth/pkg/failure"
 	"strings"
 
@@ -33,9 +34,9 @@ func Jwt() fiber.Handler {
 		}
 
 		if claims != nil {
-			c.Locals("user_id", claims.ID)
-			c.Locals("email", claims.Email)
-			c.Locals("level", claims.Level)
+			c.Locals(constant.JwtFieldUser, claims.ID)
+			c.Locals(constant.JwtFieldEmail, claims.Email)
+			c.Locals(constant.JwtFieldLevel, claims.Level)
 		}
 
 		return c.Next()
