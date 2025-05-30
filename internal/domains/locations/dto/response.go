@@ -47,6 +47,6 @@ func (l *PaginatedLocationResponse) FromModel(locations []repository.Location, t
 	l.Locations = make([]LocationResponse, len(locations))
 
 	for i, location := range locations {
-		l.Locations[i].FromModel(location)
+		l.Locations[i] = LocationResponse{}.FromModel(location)
 	}
 }
