@@ -177,3 +177,7 @@ clean: ### clean
 		rm -rf ./pkg/$$pkg/mock; \
 	done
 .PHONY: clean
+
+githooks: ### setup git hooks
+	git config core.hooksPath .githooks
+.PHONY: githooks
