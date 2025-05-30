@@ -49,6 +49,6 @@ func (f *GetFieldsResponse) FromModel(fields []repository.Field, totalItems, lim
 	f.Fields = make([]FieldResponse, len(fields))
 
 	for i, field := range fields {
-		f.Fields[i].FromModel(field)
+		f.Fields[i] = FieldResponse{}.FromModel(field)
 	}
 }
