@@ -11,13 +11,25 @@ import (
 	"github.com/google/wire"
 	"github.com/savioruz/goth/config"
 	"github.com/savioruz/goth/internal/delivery/http"
+
 	authHandler "github.com/savioruz/goth/internal/domains/auth/handler"
 	authService "github.com/savioruz/goth/internal/domains/auth/service"
+
 	oauthHandler "github.com/savioruz/goth/internal/domains/oauth/handler"
 	oauthService "github.com/savioruz/goth/internal/domains/oauth/service"
+
+	locationHandler "github.com/savioruz/goth/internal/domains/locations/handler"
+	locationRepository "github.com/savioruz/goth/internal/domains/locations/repository"
+	locationService "github.com/savioruz/goth/internal/domains/locations/service"
+
 	userHandler "github.com/savioruz/goth/internal/domains/user/handler"
 	userRepository "github.com/savioruz/goth/internal/domains/user/repository"
 	userService "github.com/savioruz/goth/internal/domains/user/service"
+
+	fieldHandler "github.com/savioruz/goth/internal/domains/fields/handler"
+	fieldRepository "github.com/savioruz/goth/internal/domains/fields/repository"
+	fieldService "github.com/savioruz/goth/internal/domains/fields/service"
+
 	"github.com/savioruz/goth/pkg/httpserver"
 	"github.com/savioruz/goth/pkg/jwt"
 	"github.com/savioruz/goth/pkg/logger"
@@ -35,6 +47,48 @@ type Application struct {
 	JWT        *jwt.JWT
 }
 
+func provideUserQuerier() userRepository.Querier {
+	return userRepository.New()
+}
+
+var userDomain = wire.NewSet(
+	provideUserQuerier,
+	userService.New,
+	userHandler.New,
+)
+
+var authDomain = wire.NewSet(
+	authService.New,
+	authHandler.New,
+)
+
+var oauthDomain = wire.NewSet(
+	oauthService.New,
+	oauthHandler.New,
+)
+
+var locationDomain = wire.NewSet(
+	locationRepository.New,
+	locationService.New,
+	locationHandler.New,
+	wire.Bind(new(locationRepository.Querier), new(*locationRepository.Queries)),
+)
+
+var fieldDomain = wire.NewSet(
+	fieldRepository.New,
+	fieldService.New,
+	fieldHandler.New,
+	wire.Bind(new(fieldRepository.Querier), new(*fieldRepository.Queries)),
+)
+
+var domains = wire.NewSet(
+	userDomain,
+	authDomain,
+	oauthDomain,
+	locationDomain,
+	fieldDomain,
+)
+
 func InitializeApp(cfg *config.Config) (*Application, error) {
 	wire.Build(
 		// Infrastructure providers
@@ -47,18 +101,9 @@ func InitializeApp(cfg *config.Config) (*Application, error) {
 		provideJWT,
 		provideGoogleOAuth,
 
-		// Repository providers
-		provideUserQuerier,
+		domains,
 
-		// Service providers
-		authService.New,
-		oauthService.New,
-		userService.New,
-
-		// Handler providers
-		authHandler.New,
-		oauthHandler.New,
-		userHandler.New,
+		wire.Struct(new(http.Handlers), "*"),
 
 		// HTTP server
 		provideRouter,
@@ -74,9 +119,7 @@ func InitializeApp(cfg *config.Config) (*Application, error) {
 func provideRouter(
 	cfg *config.Config,
 	l logger.Interface,
-	authHandler *authHandler.Handler,
-	oauthHandler *oauthHandler.Handler,
-	userHandler *userHandler.Handler,
+	h http.Handlers,
 ) *fiber.App {
 	app := fiber.New()
 
@@ -84,16 +127,10 @@ func provideRouter(
 		app,
 		cfg,
 		l,
-		authHandler,
-		oauthHandler,
-		userHandler,
+		h,
 	)
 
 	return app
-}
-
-func provideUserQuerier() userRepository.Querier {
-	return userRepository.New()
 }
 
 func provideLogger(cfg *config.Config) logger.Interface {
@@ -106,7 +143,7 @@ func provideJWT(cfg *config.Config) *jwt.JWT {
 }
 
 func providePostgres(cfg *config.Config, l logger.Interface) (*postgres.Postgres, error) {
-	dsn := postgres.ConnectionBuilder(cfg.Pg.Host, cfg.Pg.Port, cfg.Pg.User, cfg.Pg.Password, cfg.Pg.Dbname, cfg.Pg.SSLMode)
+	dsn := postgres.ConnectionBuilder(cfg.Pg.Host, cfg.Pg.Port, cfg.Pg.User, cfg.Pg.Password, cfg.Pg.Dbname, cfg.Pg.SSLMode, cfg.Pg.Timezone)
 	pg, err := postgres.New(dsn, postgres.MaxPoolSize(cfg.Pg.PoolMax))
 	if err != nil {
 		return nil, err
