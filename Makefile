@@ -180,3 +180,4 @@ clean: ### clean
 
 githooks: ### setup git hooks
 	git config core.hooksPath .githooks
+.PHONY: githooks
