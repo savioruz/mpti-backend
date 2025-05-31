@@ -2,71 +2,10 @@ package helper
 
 import (
 	"fmt"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/savioruz/goth/pkg/constant"
-	"math/big"
 	"sort"
+	"time"
 )
-
-const (
-	x = 10
-)
-
-// PgString converts a string to pgtype.Text
-func PgString(s string) pgtype.Text {
-	return pgtype.Text{
-		String: s,
-		Valid:  true,
-	}
-}
-
-// PgInt64 converts an int64 to pgtype.Numeric
-func PgInt64(i int64) pgtype.Numeric {
-	bigInt := new(big.Int).SetInt64(i)
-
-	return pgtype.Numeric{
-		Int:   bigInt,
-		Valid: true,
-	}
-}
-
-// Int64FromPg converts a pgtype.Numeric to an int64
-func Int64FromPg(n pgtype.Numeric) int64 {
-	if !n.Valid || n.Int == nil {
-		return 0
-	}
-
-	if n.Exp != 0 {
-		// Create a copy of the number to work with
-		result := new(big.Int).Set(n.Int)
-
-		// If Exp is negative, divide by 10^(-Exp)
-		if n.Exp < 0 {
-			divisor := new(big.Int).Exp(big.NewInt(x), big.NewInt(int64(-n.Exp)), nil)
-			result = result.Div(result, divisor)
-		} else {
-			// If Exp is positive, multiply by 10^Exp
-			multiplier := new(big.Int).Exp(big.NewInt(x), big.NewInt(int64(n.Exp)), nil)
-			result = result.Mul(result, multiplier)
-		}
-
-		return result.Int64()
-	}
-
-	return n.Int.Int64()
-}
-
-// PgUUID converts a string UUID to pgtype.UUID
-func PgUUID(id string) pgtype.UUID {
-	var uuid pgtype.UUID
-
-	err := uuid.Scan(id)
-	if err != nil {
-		return pgtype.UUID{Valid: false}
-	}
-
-	return uuid
-}
 
 // GenerateUniqueKey generates a unique key based on the provided map
 func GenerateUniqueKey(args map[string]string) string {
@@ -108,18 +47,22 @@ func DefaultPagination(page, limit int) (resultPage, resultLimit int) {
 	return resultPage, resultLimit
 }
 
-func CalculateOffset(page, limit int) int {
-	if page <= 0 || limit <= 0 {
-		return 0
+// IsBookingTimeValid checks if booking time is not in the past
+func IsBookingTimeValid(bookingDate string, startTimeStr string) (bool, error) {
+	bookingDateObj, err := time.Parse(constant.DateFormat, bookingDate)
+	if err != nil {
+		return false, err
 	}
 
-	return (page - 1) * limit
-}
-
-func CalculateTotalPages(totalItems, limit int) int {
-	if totalItems <= 0 || limit <= 0 {
-		return 1
+	startTime, err := time.Parse(constant.HoursFormat, startTimeStr)
+	if err != nil {
+		return false, err
 	}
 
-	return (totalItems + limit - 1) / limit
+	bookingDateTime := time.Date(
+		bookingDateObj.Year(), bookingDateObj.Month(), bookingDateObj.Day(),
+		startTime.Hour(), startTime.Minute(), 0, 0, time.Local,
+	)
+
+	return bookingDateTime.After(time.Now()), nil
 }
