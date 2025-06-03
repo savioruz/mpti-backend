@@ -7,6 +7,7 @@ import (
 	"github.com/savioruz/goth/internal/delivery/http/response"
 	"github.com/savioruz/goth/internal/domains/locations/dto"
 	"github.com/savioruz/goth/internal/domains/locations/service"
+	"github.com/savioruz/goth/pkg/constant"
 	"github.com/savioruz/goth/pkg/failure"
 	"github.com/savioruz/goth/pkg/gdto"
 	"github.com/savioruz/goth/pkg/logger"
@@ -94,16 +95,9 @@ func (h *Handler) Create(ctx *fiber.Ctx) error {
 // @Failure 500 {object} response.Error
 // @Router /locations/{id} [get]
 func (h *Handler) Get(ctx *fiber.Ctx) error {
-	id := ctx.Params("id")
-	if id == "" {
-		err := failure.BadRequestFromString("location id is required")
+	id := ctx.Params(constant.RequestParamID)
 
-		h.logger.Error(identifier, "get - location id is required: %w", err)
-
-		return response.WithError(ctx, err)
-	}
-
-	if err := h.validator.Var(id, "required,uuid"); err != nil {
+	if err := h.validator.Var(id, constant.RequestValidateUUID); err != nil {
 		err = failure.BadRequestFromString("invalid location id format")
 
 		h.logger.Error(identifier, "get - invalid location id format: %w", err)

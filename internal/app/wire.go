@@ -30,6 +30,10 @@ import (
 	fieldRepository "github.com/savioruz/goth/internal/domains/fields/repository"
 	fieldService "github.com/savioruz/goth/internal/domains/fields/service"
 
+	bookingHandler "github.com/savioruz/goth/internal/domains/bookings/handler"
+	bookingRepository "github.com/savioruz/goth/internal/domains/bookings/repository"
+	bookingService "github.com/savioruz/goth/internal/domains/bookings/service"
+
 	"github.com/savioruz/goth/pkg/httpserver"
 	"github.com/savioruz/goth/pkg/jwt"
 	"github.com/savioruz/goth/pkg/logger"
@@ -81,12 +85,20 @@ var fieldDomain = wire.NewSet(
 	wire.Bind(new(fieldRepository.Querier), new(*fieldRepository.Queries)),
 )
 
+var bookingDomain = wire.NewSet(
+	bookingRepository.New,
+	bookingService.New,
+	bookingHandler.New,
+	wire.Bind(new(bookingRepository.Querier), new(*bookingRepository.Queries)),
+)
+
 var domains = wire.NewSet(
 	userDomain,
 	authDomain,
 	oauthDomain,
 	locationDomain,
 	fieldDomain,
+	bookingDomain,
 )
 
 func InitializeApp(cfg *config.Config) (*Application, error) {

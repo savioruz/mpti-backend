@@ -1,13 +1,39 @@
 package constant
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 const (
 	CacheParentKey = "mpti-backend"
 )
 
 const (
-	DateFormat = time.RFC3339
+	RequestParamID = "id"
+
+	RequestValidateUUID = "required,uuid"
+)
+
+const (
+	BookingStatusPending   = "pending"
+	BookingStatusCanceled  = "canceled"
+	BookingStatusExpired   = "expired"
+	BookingStatusConfirmed = "confirmed"
+
+	BookingCanceledByUser   = "user"
+	BookingCanceledByAdmin  = "admin"
+	BookingCanceledBySystem = "system"
+)
+
+const (
+	FullDateFormat = time.RFC3339
+	DateFormat     = "2006-01-02"
+	HoursFormat    = "15:04"
+
+	SecondsPerHour     = 3600
+	MinutesPerHour     = 60
+	MicrosecondsPerSec = 1000000
 )
 
 const (
@@ -24,4 +50,8 @@ const (
 const (
 	PaginationDefaultLimit = 10
 	PaginationDefaultPage  = 1
+)
+
+var (
+	ErrInvalidContextUserType = errors.New("invalid user type in context")
 )
