@@ -87,7 +87,7 @@ func PgTimeFromString(timeStr string) (pgtype.Time, error) {
 	}
 
 	return pgtype.Time{
-		Microseconds: int64((parsedTime.Hour()*constant.SecondsPerHour + parsedTime.Minute()*constant.SecondsPerMinute) * constant.MicrosecondsPerSec),
+		Microseconds: int64((parsedTime.Hour()*constant.SecondsPerHour + parsedTime.Minute()*constant.MinutesPerHour) * constant.MicrosecondsPerSec),
 		Valid:        true,
 	}, nil
 }
@@ -95,7 +95,7 @@ func PgTimeFromString(timeStr string) (pgtype.Time, error) {
 // PgTimeFromTime converts a time.Time object to pgtype.Time
 func PgTimeFromTime(t time.Time) pgtype.Time {
 	return pgtype.Time{
-		Microseconds: int64((t.Hour()*constant.SecondsPerHour + t.Minute()*constant.SecondsPerMinute) * constant.MicrosecondsPerSec),
+		Microseconds: int64((t.Hour()*constant.SecondsPerHour + t.Minute()*constant.MinutesPerHour) * constant.MicrosecondsPerSec),
 		Valid:        true,
 	}
 }
@@ -124,7 +124,7 @@ func PgTimeToString(t pgtype.Time) (string, error) {
 
 	totalSeconds := t.Microseconds / constant.MicrosecondsPerSec
 	hours := totalSeconds / constant.SecondsPerHour
-	minutes := (totalSeconds % constant.SecondsPerHour) / constant.SecondsPerMinute
+	minutes := (totalSeconds % constant.SecondsPerHour) / constant.MinutesPerHour
 
 	return time.Date(0, 1, 1, int(hours), int(minutes), 0, 0, time.Local).Format(constant.HoursFormat), nil
 }

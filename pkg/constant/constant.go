@@ -32,7 +32,7 @@ const (
 	HoursFormat    = "15:04"
 
 	SecondsPerHour     = 3600
-	SecondsPerMinute   = 60
+	MinutesPerHour     = 60
 	MicrosecondsPerSec = 1000000
 )
 

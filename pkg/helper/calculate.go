@@ -30,12 +30,12 @@ func CalculateTotalPrice(pricePerHour int64, durationMinutes int) int64 {
 		return 0
 	}
 
-	hours := durationMinutes / constant.SecondsPerMinute
-	minutes := durationMinutes % constant.SecondsPerMinute
+	hours := durationMinutes / constant.MinutesPerHour
+	minutes := durationMinutes % constant.MinutesPerHour
 
 	totalPrice := pricePerHour * int64(hours)
 	if minutes > 0 {
-		totalPrice += pricePerHour * int64(minutes) / constant.SecondsPerMinute
+		totalPrice += pricePerHour * int64(minutes) / constant.MinutesPerHour
 	}
 
 	return totalPrice
