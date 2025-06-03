@@ -46,8 +46,9 @@ func New(db postgres.PgxIface, repo repository.Querier, cache redis.IRedisCache,
 }
 
 const (
-	cacheGetLocationsKey = "locations"
-	cacheGetLocationKey  = "location"
+	cacheGetLocationsKey   = "locations"
+	cacheCountLocationsKey = "locations:count"
+	cacheGetLocationKey    = "location"
 
 	identifier = "service - location - %s"
 )
@@ -70,7 +71,7 @@ func (s *locationService) Create(ctx context.Context, req dto.CreateLocationRequ
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "count")); err != nil {
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheCountLocationsKey, "*")); err != nil {
 			s.logger.Error(identifier, "create - failed to delete cache for count: %w", err)
 		}
 
@@ -122,7 +123,7 @@ func (s *locationService) Get(ctx context.Context, id string) (res dto.LocationR
 }
 
 func (s *locationService) Count(ctx context.Context, filter string) (res int, err error) {
-	cacheKey := helper.BuildCacheKey(cacheGetLocationsKey, "count")
+	cacheKey := helper.BuildCacheKey(cacheGetLocationsKey, filter)
 
 	var cacheRes int
 	err = s.cache.Get(ctx, cacheKey, &cacheRes)
@@ -267,12 +268,12 @@ func (s *locationService) Update(ctx context.Context, id string, req dto.UpdateL
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "count")); err != nil {
-			s.logger.Error(identifier, "update - failed to delete cache for count: %w", err)
-		}
-
 		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetLocationKey, id)); err != nil {
 			s.logger.Error(identifier, "update - failed to delete cache for location %s: %w", id, err)
+		}
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheCountLocationsKey, "*")); err != nil {
+			s.logger.Error(identifier, "update - failed to delete cache for count: %w", err)
 		}
 
 		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "*")); err != nil {
@@ -300,12 +301,12 @@ func (s *locationService) Delete(ctx context.Context, id string) (res string, er
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "count")); err != nil {
-			s.logger.Error(identifier, "delete - failed to delete cache for count: %w", err)
-		}
-
 		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetLocationKey, id)); err != nil {
 			s.logger.Error(identifier, "delete - failed to delete cache for location %s: %w", id, err)
+		}
+
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheCountLocationsKey, "*")); err != nil {
+			s.logger.Error(identifier, "delete - failed to delete cache for count: %w", err)
 		}
 
 		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetLocationsKey, "*")); err != nil {

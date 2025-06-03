@@ -25,8 +25,8 @@ func (f FieldResponse) FromModel(model repository.Field) FieldResponse {
 		Type:        model.Type,
 		Price:       helper.Int64FromPg(model.Price),
 		Description: model.Description.String,
-		CreatedAt:   model.CreatedAt.Time.Format(constant.DateFormat),
-		UpdatedAt:   model.UpdatedAt.Time.Format(constant.DateFormat),
+		CreatedAt:   model.CreatedAt.Time.Format(constant.FullDateFormat),
+		UpdatedAt:   model.UpdatedAt.Time.Format(constant.FullDateFormat),
 	}
 }
 

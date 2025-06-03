@@ -23,8 +23,8 @@ func (l LocationResponse) FromModel(model repository.Location) LocationResponse 
 		Latitude:    model.Latitude,
 		Longitude:   model.Longitude,
 		Description: model.Description.String,
-		CreatedAt:   model.CreatedAt.Time.Format(constant.DateFormat),
-		UpdatedAt:   model.UpdatedAt.Time.Format(constant.DateFormat),
+		CreatedAt:   model.CreatedAt.Time.Format(constant.FullDateFormat),
+		UpdatedAt:   model.UpdatedAt.Time.Format(constant.FullDateFormat),
 	}
 }
 
