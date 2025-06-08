@@ -8,6 +8,7 @@ import (
 type (
 	Config struct {
 		App      App
+		CORS     CORS
 		Cache    Cache
 		HTTP     HTTP
 		Log      Log
@@ -23,6 +24,15 @@ type (
 	App struct {
 		Name    string `env:"APP_NAME,required"`
 		Version string `env:"APP_VERSION,required"`
+	}
+
+	CORS struct {
+		AllowCredentials bool   `env:"APP_CORS_ALLOW_CREDENTIALS"`
+		AllowedHeaders   string `env:"APP_CORS_ALLOWED_HEADERS"`
+		AllowedMethods   string `env:"APP_CORS_ALLOWED_METHODS"`
+		AllowedOrigins   string `env:"APP_CORS_ALLOWED_ORIGINS"`
+		Enable           bool   `env:"APP_CORS_ENABLE"`
+		MaxAgeSeconds    int    `env:"APP_CORS_MAX_AGE_SECONDS"`
 	}
 
 	Cache struct {
