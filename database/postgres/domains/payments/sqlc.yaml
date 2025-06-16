@@ -1,0 +1,15 @@
+version: "2"
+sql:
+  - name: "payments"
+    engine: "postgresql"
+    schema: "./schema.sql"
+    queries: "./queries.sql"
+    gen:
+      go:
+        package: "repository"
+        sql_package: "pgx/v5"
+        out: "../../../../internal/domains/payments/repository"
+        emit_json_tags: true
+        emit_db_tags: true
+        emit_methods_with_db_argument: true
+        emit_interface: true

@@ -88,7 +88,21 @@ func (h *Handler) CreateBooking(ctx *fiber.Ctx) error {
 		return response.WithError(ctx, constant.ErrInvalidContextUserType)
 	}
 
-	res, err := h.service.CreateBooking(ctx.Context(), req, user)
+	emailRaw := ctx.Locals(constant.JwtFieldEmail)
+	if emailRaw == nil {
+		h.logger.Error(identifier, "email not found in context")
+
+		return response.WithError(ctx, failure.Unauthorized("email not authenticated"))
+	}
+
+	email, ok := emailRaw.(string)
+	if !ok {
+		h.logger.Error(identifier, "invalid email type in context")
+
+		return response.WithError(ctx, constant.ErrInvalidContextUserType)
+	}
+
+	res, err := h.service.CreateBooking(ctx.Context(), req, user, email)
 	if err != nil {
 		h.logger.Error(identifier, "error creating booking: "+err.Error())
 

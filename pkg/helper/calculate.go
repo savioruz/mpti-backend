@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"github.com/savioruz/goth/pkg/constant"
 	"time"
 )
 
@@ -25,18 +24,10 @@ func CalculateEndTime(startTime time.Time, durationMinutes int) time.Time {
 	return startTime.Add(time.Duration(durationMinutes) * time.Minute)
 }
 
-func CalculateTotalPrice(pricePerHour int64, durationMinutes int) int64 {
-	if pricePerHour <= 0 || durationMinutes <= 0 {
+func CalculateTotalPrice(pricePerHour int64, durationHours int) int64 {
+	if pricePerHour <= 0 || durationHours <= 0 {
 		return 0
 	}
 
-	hours := durationMinutes / constant.MinutesPerHour
-	minutes := durationMinutes % constant.MinutesPerHour
-
-	totalPrice := pricePerHour * int64(hours)
-	if minutes > 0 {
-		totalPrice += pricePerHour * int64(minutes) / constant.MinutesPerHour
-	}
-
-	return totalPrice
+	return pricePerHour * int64(durationHours)
 }

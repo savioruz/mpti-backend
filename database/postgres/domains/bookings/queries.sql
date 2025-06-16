@@ -53,3 +53,9 @@ WHERE field_id = $1
   AND booking_date = $2
   AND status IN ('pending', 'confirmed')
 ORDER BY start_time;
+
+-- name: UpdateBookingStatus :exec
+UPDATE bookings
+SET status = $2,
+    updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL;
