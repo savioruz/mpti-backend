@@ -63,9 +63,9 @@ func (s *paymentService) CreateInvoice(ctx context.Context, req dto.CreatePaymen
 
 	invoiceResult, _, erro := s.xendit.InvoiceApi.CreateInvoice(ctx).CreateInvoiceRequest(createInvoice).Execute()
 	if erro != nil {
-		s.logger.Error(identifier, " - CreateInvoice - failed to create invoiceResult: %v", err)
+		s.logger.Error(identifier, " - CreateInvoice - failed to create invoiceResult: %v", erro)
 
-		return res, failure.InternalError(err)
+		return res, failure.InternalError(erro)
 	}
 
 	// Check for nil fields in invoiceResult
