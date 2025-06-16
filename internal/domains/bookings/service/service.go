@@ -8,6 +8,8 @@ import (
 	"github.com/savioruz/goth/internal/domains/bookings/dto"
 	"github.com/savioruz/goth/internal/domains/bookings/repository"
 	fieldRepo "github.com/savioruz/goth/internal/domains/fields/repository"
+	paymentDto "github.com/savioruz/goth/internal/domains/payments/dto"
+	"github.com/savioruz/goth/internal/domains/payments/service"
 	"github.com/savioruz/goth/pkg/constant"
 	"github.com/savioruz/goth/pkg/failure"
 	"github.com/savioruz/goth/pkg/gdto"
@@ -19,7 +21,7 @@ import (
 )
 
 type BookingService interface {
-	CreateBooking(ctx context.Context, req dto.CreateBookingRequest, user string) (string, error)
+	CreateBooking(ctx context.Context, req dto.CreateBookingRequest, userID, email string) (paymentDto.CreatePaymentResponse, error)
 	GetBookingByID(ctx context.Context, id string) (dto.BookingResponse, error)
 	GetUserBookings(ctx context.Context, userID string, req gdto.PaginationRequest) (dto.GetBookingsResponse, error)
 	CountUserBookings(ctx context.Context, userID string, req gdto.PaginationRequest) (int, error)
@@ -28,22 +30,24 @@ type BookingService interface {
 }
 
 type bookingService struct {
-	db        postgres.PgxIface
-	repo      repository.Querier
-	fieldRepo fieldRepo.Querier
-	cache     redis.IRedisCache
-	cfg       *config.Config
-	logger    logger.Interface
+	db             postgres.PgxIface
+	repo           repository.Querier
+	fieldRepo      fieldRepo.Querier
+	paymentService service.PaymentService
+	cache          redis.IRedisCache
+	cfg            *config.Config
+	logger         logger.Interface
 }
 
-func New(db postgres.PgxIface, r repository.Querier, f fieldRepo.Querier, c redis.IRedisCache, cfg *config.Config, l logger.Interface) BookingService {
+func New(db postgres.PgxIface, r repository.Querier, f fieldRepo.Querier, p service.PaymentService, c redis.IRedisCache, cfg *config.Config, l logger.Interface) BookingService {
 	return &bookingService{
-		db:        db,
-		repo:      r,
-		fieldRepo: f,
-		cache:     c,
-		cfg:       cfg,
-		logger:    l,
+		db:             db,
+		repo:           r,
+		fieldRepo:      f,
+		paymentService: p,
+		cache:          c,
+		cfg:            cfg,
+		logger:         l,
 	}
 }
 
@@ -55,7 +59,7 @@ const (
 	identifier = "service - booking - %s"
 )
 
-func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookingRequest, user string) (res string, err error) {
+func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookingRequest, userID, email string) (res paymentDto.CreatePaymentResponse, err error) {
 	isValid, err := helper.IsBookingTimeValid(req.Date, req.StartTime)
 	if err != nil {
 		s.logger.Error(identifier, "error validating booking time: "+err.Error())
@@ -130,7 +134,7 @@ func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookin
 	totalPrice := helper.CalculateTotalPrice(helper.Int64FromPg(field.Price), req.Duration)
 
 	booking, err := s.repo.InsertBooking(ctx, tx, repository.InsertBookingParams{
-		UserID:      helper.PgUUID(user),
+		UserID:      helper.PgUUID(userID),
 		FieldID:     field.ID,
 		BookingDate: helper.PgDate(req.Date),
 		StartTime:   startTime,
@@ -150,8 +154,11 @@ func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookin
 		return res, err
 	}
 
-	// @TODO: implement payment processing
-	res = booking.String()
+	res, err = s.paymentService.CreateInvoice(ctx, paymentDto.CreatePaymentRequest{
+		OrderID:    booking.String(),
+		Amount:     totalPrice,
+		PayerEmail: email,
+	})
 
 	go func() {
 		ctx := context.WithoutCancel(ctx)

@@ -42,6 +42,7 @@ func NewRouter(
 	app.Use(middleware.Logger(l))
 	app.Use(middleware.Recovery(l))
 	app.Use(middleware.RequestID())
+	app.Use(middleware.CORS(cfg))
 
 	if cfg.Swagger.Enabled {
 		app.Get("/swagger/*", swagger.HandlerDefault)

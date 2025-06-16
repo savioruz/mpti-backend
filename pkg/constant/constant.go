@@ -27,6 +27,14 @@ const (
 )
 
 const (
+	PaymentCurrencyIDR = "IDR"
+)
+
+const (
+	RequestHeaderCallback = "x-callback-token"
+)
+
+const (
 	FullDateFormat = time.RFC3339
 	DateFormat     = "2006-01-02"
 	HoursFormat    = "15:04"

@@ -15,11 +15,13 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/pashagolub/pgxmock/v4 v4.7.0
 	github.com/redis/go-redis/v9 v9.7.3
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/rs/zerolog v1.33.0
 	github.com/sqlc-dev/sqlc v1.29.0
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/swag v1.16.4
 	github.com/valyala/fasthttp v1.51.0
+	github.com/xendit/xendit-go/v7 v7.0.0
 	go.uber.org/mock v0.5.1
 	golang.org/x/crypto v0.37.0
 	golang.org/x/oauth2 v0.28.0
@@ -85,7 +87,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/riza-io/grpc-go v0.2.0 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
@@ -101,7 +102,6 @@ require (
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/wasilibs/go-pgquery v0.0.0-20250409022910-10ac41983c07 // indirect
 	github.com/wasilibs/wazero-helpers v0.0.0-20240620070341-3dff1577cd52 // indirect
-	github.com/xendit/xendit-go/v7 v7.0.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
