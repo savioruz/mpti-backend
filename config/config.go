@@ -94,11 +94,6 @@ type (
 		APIKey        string `env:"XENDIT_API_KEY,required"`
 		CallbackToken string `env:"XENDIT_CALLBACK_TOKEN,required"`
 	}
-
-	Xendit struct {
-		APIKey        string `env:"XENDIT_API_KEY,required"`
-		CallbackToken string `env:"XENDIT_CALLBACK_TOKEN,required"`
-	}
 )
 
 func New() (*Config, error) {
