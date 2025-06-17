@@ -128,3 +128,12 @@ func PgTimeToString(t pgtype.Time) (string, error) {
 
 	return time.Date(0, 1, 1, int(hours), int(minutes), 0, 0, time.Local).Format(constant.HoursFormat), nil
 }
+
+// PgTimestamp converts a time.Time object to pgtype.Timestamp
+func PgTimestamp(t time.Time) pgtype.Timestamp {
+	return pgtype.Timestamp{
+		Time:             t,
+		InfinityModifier: 0,
+		Valid:            true,
+	}
+}

@@ -17,6 +17,7 @@ import (
 	"github.com/savioruz/goth/pkg/redis"
 	"github.com/xendit/xendit-go/v7"
 	"github.com/xendit/xendit-go/v7/invoice"
+	"time"
 )
 
 type PaymentService interface {
@@ -163,6 +164,7 @@ func (s *paymentService) Callbacks(ctx context.Context, req dto.PaymentCallbackR
 	if err := s.repo.UpdatePaymentStatus(ctx, tx, repository.UpdatePaymentStatusParams{
 		TransactionID: req.ExternalID,
 		PaymentStatus: req.Status,
+		PaidAt:        helper.PgTimestamp(time.Now()),
 	}); err != nil {
 		s.logger.Error(identifier, " - Callbacks - failed to update payment status: %v", err)
 
