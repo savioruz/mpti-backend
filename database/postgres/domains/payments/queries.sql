@@ -16,6 +16,6 @@ ORDER BY created_at DESC;
 -- name: UpdatePaymentStatus :exec
 UPDATE payments
 SET payment_status = $2,
-    paid_at = CASE WHEN $2 = 'PAID' THEN now() ELSE paid_at END,
+    paid_at = $3,
     updated_at = now()
 WHERE transaction_id = $1;
