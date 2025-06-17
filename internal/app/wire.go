@@ -33,6 +33,7 @@ import (
 	bookingRepository "github.com/savioruz/goth/internal/domains/bookings/repository"
 	bookingService "github.com/savioruz/goth/internal/domains/bookings/service"
 
+	paymentHandler "github.com/savioruz/goth/internal/domains/payments/handler"
 	paymentRepository "github.com/savioruz/goth/internal/domains/payments/repository"
 	paymentService "github.com/savioruz/goth/internal/domains/payments/service"
 
@@ -110,6 +111,7 @@ func providePaymentQuerier() paymentRepository.Querier {
 var paymentDomain = wire.NewSet(
 	providePaymentQuerier,
 	paymentService.New,
+	paymentHandler.New,
 )
 
 var domains = wire.NewSet(

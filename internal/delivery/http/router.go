@@ -10,6 +10,7 @@ import (
 	fieldHandler "github.com/savioruz/goth/internal/domains/fields/handler"
 	locationHandler "github.com/savioruz/goth/internal/domains/locations/handler"
 	oauthHandler "github.com/savioruz/goth/internal/domains/oauth/handler"
+	paymentHandler "github.com/savioruz/goth/internal/domains/payments/handler"
 	userHandler "github.com/savioruz/goth/internal/domains/user/handler"
 
 	"github.com/savioruz/goth/internal/delivery/http/middleware"
@@ -23,6 +24,7 @@ type Handlers struct {
 	Location *locationHandler.Handler
 	Field    *fieldHandler.Handler
 	Booking  *bookingHandler.Handler
+	Payment  *paymentHandler.Handler
 }
 
 // NewRouter initializes the HTTP router and registers the routes for the application.
@@ -56,6 +58,7 @@ func NewRouter(
 		handlers.Location.RegisterRoutes(apiV1Group)
 		handlers.Field.RegisterRoutes(apiV1Group)
 		handlers.Booking.RegisterRoutes(apiV1Group)
+		handlers.Payment.RegisterRoutes(apiV1Group)
 	}
 
 	app.Use("*", func(c *fiber.Ctx) error {
