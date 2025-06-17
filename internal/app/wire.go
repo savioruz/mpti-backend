@@ -5,7 +5,6 @@ package app
 
 import (
 	"fmt"
-
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/wire"
@@ -29,6 +28,13 @@ import (
 	fieldHandler "github.com/savioruz/goth/internal/domains/fields/handler"
 	fieldRepository "github.com/savioruz/goth/internal/domains/fields/repository"
 	fieldService "github.com/savioruz/goth/internal/domains/fields/service"
+
+	bookingHandler "github.com/savioruz/goth/internal/domains/bookings/handler"
+	bookingRepository "github.com/savioruz/goth/internal/domains/bookings/repository"
+	bookingService "github.com/savioruz/goth/internal/domains/bookings/service"
+
+	paymentRepository "github.com/savioruz/goth/internal/domains/payments/repository"
+	paymentService "github.com/savioruz/goth/internal/domains/payments/service"
 
 	"github.com/savioruz/goth/pkg/httpserver"
 	"github.com/savioruz/goth/pkg/jwt"
@@ -67,18 +73,43 @@ var oauthDomain = wire.NewSet(
 	oauthHandler.New,
 )
 
+func provideLocationQuerier() locationRepository.Querier {
+	return locationRepository.New()
+}
+
 var locationDomain = wire.NewSet(
-	locationRepository.New,
+	provideLocationQuerier,
 	locationService.New,
 	locationHandler.New,
-	wire.Bind(new(locationRepository.Querier), new(*locationRepository.Queries)),
 )
 
+func provideFieldQuerier() fieldRepository.Querier {
+	return fieldRepository.New()
+}
+
 var fieldDomain = wire.NewSet(
-	fieldRepository.New,
+	provideFieldQuerier,
 	fieldService.New,
 	fieldHandler.New,
-	wire.Bind(new(fieldRepository.Querier), new(*fieldRepository.Queries)),
+)
+
+func provideBookingQuerier() bookingRepository.Querier {
+	return bookingRepository.New()
+}
+
+var bookingDomain = wire.NewSet(
+	provideBookingQuerier,
+	bookingService.New,
+	bookingHandler.New,
+)
+
+func providePaymentQuerier() paymentRepository.Querier {
+	return paymentRepository.New()
+}
+
+var paymentDomain = wire.NewSet(
+	providePaymentQuerier,
+	paymentService.New,
 )
 
 var domains = wire.NewSet(
@@ -87,6 +118,8 @@ var domains = wire.NewSet(
 	oauthDomain,
 	locationDomain,
 	fieldDomain,
+	bookingDomain,
+	paymentDomain,
 )
 
 func InitializeApp(cfg *config.Config) (*Application, error) {

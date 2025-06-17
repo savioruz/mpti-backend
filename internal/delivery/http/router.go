@@ -6,6 +6,7 @@ import (
 	"github.com/savioruz/goth/config"
 	_ "github.com/savioruz/goth/docs" // Swagger docs
 	authHandler "github.com/savioruz/goth/internal/domains/auth/handler"
+	bookingHandler "github.com/savioruz/goth/internal/domains/bookings/handler"
 	fieldHandler "github.com/savioruz/goth/internal/domains/fields/handler"
 	locationHandler "github.com/savioruz/goth/internal/domains/locations/handler"
 	oauthHandler "github.com/savioruz/goth/internal/domains/oauth/handler"
@@ -21,11 +22,12 @@ type Handlers struct {
 	User     *userHandler.Handler
 	Location *locationHandler.Handler
 	Field    *fieldHandler.Handler
+	Booking  *bookingHandler.Handler
 }
 
 // NewRouter initializes the HTTP router and registers the routes for the application.
 // Swagger spec:
-// @title Goth API
+// @title mpti API
 // @BasePath /v1
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -40,6 +42,7 @@ func NewRouter(
 	app.Use(middleware.Logger(l))
 	app.Use(middleware.Recovery(l))
 	app.Use(middleware.RequestID())
+	app.Use(middleware.CORS(cfg))
 
 	if cfg.Swagger.Enabled {
 		app.Get("/swagger/*", swagger.HandlerDefault)
@@ -52,6 +55,7 @@ func NewRouter(
 		handlers.User.RegisterRoutes(apiV1Group)
 		handlers.Location.RegisterRoutes(apiV1Group)
 		handlers.Field.RegisterRoutes(apiV1Group)
+		handlers.Booking.RegisterRoutes(apiV1Group)
 	}
 
 	app.Use("*", func(c *fiber.Ctx) error {

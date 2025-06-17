@@ -7,6 +7,7 @@ import (
 	"github.com/savioruz/goth/internal/delivery/http/response"
 	"github.com/savioruz/goth/internal/domains/fields/dto"
 	"github.com/savioruz/goth/internal/domains/fields/service"
+	"github.com/savioruz/goth/pkg/constant"
 	"github.com/savioruz/goth/pkg/failure"
 	"github.com/savioruz/goth/pkg/gdto"
 	"github.com/savioruz/goth/pkg/logger"
@@ -101,11 +102,13 @@ func (h *Handler) Create(ctx *fiber.Ctx) error {
 // @Failure 500 {object} response.Error
 // @Router /fields/{id} [get]
 func (h *Handler) Get(ctx *fiber.Ctx) error {
-	id := ctx.Params("id")
-	if id == "" {
-		h.logger.Error("http - field - get - id is empty")
+	id := ctx.Params(constant.RequestParamID)
+	if err := h.validator.Var(id, constant.RequestValidateUUID); err != nil {
+		err = failure.BadRequestFromString("invalid field id format")
 
-		return response.WithError(ctx, failure.BadRequestFromString("id is required"))
+		h.logger.Error(identifier, "get - validate error: %w", err)
+
+		return response.WithError(ctx, err)
 	}
 
 	data, err := h.service.Get(ctx.UserContext(), id)

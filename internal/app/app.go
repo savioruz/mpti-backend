@@ -29,6 +29,8 @@ func Run(cfg *config.Config) {
 		app.Logger.Fatal(fmt.Errorf("app - Run - redis.Ping: %w", err))
 	}
 
+	go Cron(app.PG.Pool, cfg, app.Logger)
+
 	app.HTTPServer.Start()
 
 	interrupt := make(chan os.Signal, 1)

@@ -7,20 +7,32 @@ import (
 
 type (
 	Config struct {
-		App     App
-		Cache   Cache
-		HTTP    HTTP
-		Log     Log
-		Pg      Pg
-		Redis   Redis
-		Swagger Swagger
-		JWT     JWT
-		OAuth   OAuth
+		App      App
+		CORS     CORS
+		Cache    Cache
+		HTTP     HTTP
+		Log      Log
+		Pg       Pg
+		Redis    Redis
+		Swagger  Swagger
+		Schedule Schedule
+		JWT      JWT
+		OAuth    OAuth
+		Xendit   Xendit
 	}
 
 	App struct {
 		Name    string `env:"APP_NAME,required"`
 		Version string `env:"APP_VERSION,required"`
+	}
+
+	CORS struct {
+		AllowCredentials bool   `env:"APP_CORS_ALLOW_CREDENTIALS"`
+		AllowedHeaders   string `env:"APP_CORS_ALLOWED_HEADERS"`
+		AllowedMethods   string `env:"APP_CORS_ALLOWED_METHODS"`
+		AllowedOrigins   string `env:"APP_CORS_ALLOWED_ORIGINS"`
+		Enable           bool   `env:"APP_CORS_ENABLE"`
+		MaxAgeSeconds    int    `env:"APP_CORS_MAX_AGE_SECONDS"`
 	}
 
 	Cache struct {
@@ -57,6 +69,10 @@ type (
 		Enabled bool `env:"SWAGGER_ENABLED" envDefault:"false"`
 	}
 
+	Schedule struct {
+		BookingsExpiration string `env:"SCHEDULE_BOOKINGS_EXPIRATION,required"`
+	}
+
 	JWT struct {
 		Secret             string `env:"JWT_SECRET,required"`
 		AccessTokenExpiry  string `env:"JWT_ACCESS_TOKEN_EXPIRY"  envDefault:"24h"`
@@ -71,6 +87,11 @@ type (
 		ClientID     string `env:"OAUTH_GOOGLE_CLIENT_ID,required"`
 		ClientSecret string `env:"OAUTH_GOOGLE_CLIENT_SECRET,required"`
 		RedirectURL  string `env:"OAUTH_GOOGLE_REDIRECT_URL,required"`
+	}
+
+	Xendit struct {
+		APIKey        string `env:"XENDIT_API_KEY,required"`
+		CallbackToken string `env:"XENDIT_CALLBACK_TOKEN,required"`
 	}
 )
 

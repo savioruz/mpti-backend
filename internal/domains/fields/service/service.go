@@ -48,8 +48,9 @@ func New(db postgres.PgxIface, repo repository.Querier, cache redis.IRedisCache,
 }
 
 const (
-	cacheGetFieldsKey = "fields"
-	cacheGetFieldKey  = "field"
+	cacheGetFieldsKey   = "fields"
+	cacheCountFieldsKey = "fields:count"
+	cacheGetFieldKey    = "field"
 
 	identifier = "service - location - %s"
 )
@@ -73,7 +74,7 @@ func (s *fieldService) Create(ctx context.Context, req dto.FieldCreateRequest) (
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "count")); err != nil {
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheCountFieldsKey, "*")); err != nil {
 			s.logger.Error(identifier, "create - failed to delete cache: %w", err)
 		}
 
@@ -177,7 +178,7 @@ func (s *fieldService) Count(ctx context.Context, req gdto.PaginationRequest) (t
 	keyArgs["page"] = strconv.Itoa(page)
 	keyArgs["limit"] = strconv.Itoa(limit)
 	keyArgs["filter"] = req.Filter
-	cacheKey := helper.BuildCacheKey(cacheGetFieldsKey, helper.GenerateUniqueKey(keyArgs))
+	cacheKey := helper.BuildCacheKey(cacheCountFieldsKey, helper.GenerateUniqueKey(keyArgs))
 
 	var cacheRes int
 
@@ -251,11 +252,8 @@ func (s *fieldService) GetByLocationID(ctx context.Context, locationID string, r
 	res.FromModel(fields, totalItems, limit)
 
 	go func() {
-		ctx := context.WithoutCancel(ctx)
-
-		err := s.cache.Save(ctx, cacheKey, res, s.cfg.Cache.Duration)
-		if err != nil {
-			s.logger.Error(identifier, "getByLocationID - failed to set cache: %w", err)
+		if err := s.cache.Save(context.WithoutCancel(ctx), cacheKey, res, s.cfg.Cache.Duration); err != nil {
+			s.logger.Error(identifier, "get by location id - failed to save cache: %w", err)
 		}
 	}()
 
@@ -270,7 +268,7 @@ func (s *fieldService) CountByLocationID(ctx context.Context, locationID string,
 	keyArgs["page"] = strconv.Itoa(page)
 	keyArgs["limit"] = strconv.Itoa(limit)
 	keyArgs["filter"] = req.Filter
-	cacheKey := helper.BuildCacheKey(cacheGetFieldsKey, helper.GenerateUniqueKey(keyArgs))
+	cacheKey := helper.BuildCacheKey(cacheCountFieldsKey, helper.GenerateUniqueKey(keyArgs))
 
 	var cacheRes int
 
@@ -373,11 +371,11 @@ func (s *fieldService) Update(ctx context.Context, id string, req dto.FieldUpdat
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "count")); err != nil {
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldKey, id)); err != nil {
 			s.logger.Error(identifier, "update - failed to delete cache: %w", err)
 		}
 
-		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldKey, id)); err != nil {
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheCountFieldsKey, "*")); err != nil {
 			s.logger.Error(identifier, "update - failed to delete cache: %w", err)
 		}
 
@@ -406,11 +404,11 @@ func (s *fieldService) Delete(ctx context.Context, id string) (res string, err e
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
-		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "count")); err != nil {
+		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldKey, id)); err != nil {
 			s.logger.Error(identifier, "delete - failed to delete cache: %w", err)
 		}
 
-		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldKey, id)); err != nil {
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "*")); err != nil {
 			s.logger.Error(identifier, "delete - failed to delete cache: %w", err)
 		}
 
