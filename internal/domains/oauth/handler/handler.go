@@ -2,11 +2,12 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/savioruz/goth/config"
 	"github.com/savioruz/goth/internal/delivery/http/response"
 	"github.com/savioruz/goth/internal/domains/oauth/service"
-
 	// Register dto for swagger docs
 	_ "github.com/savioruz/goth/internal/domains/user/dto"
 	"github.com/savioruz/goth/pkg/logger"
@@ -20,13 +21,15 @@ type Handler struct {
 	service   service.OAuthService
 	logger    logger.Interface
 	validator *validator.Validate
+	cfg       *config.Config
 }
 
-func New(s service.OAuthService, l logger.Interface, v *validator.Validate) *Handler {
+func New(s service.OAuthService, l logger.Interface, v *validator.Validate, cfg *config.Config) *Handler {
 	return &Handler{
 		service:   s,
 		logger:    l,
 		validator: v,
+		cfg:       cfg,
 	}
 }
 
@@ -38,34 +41,35 @@ func (h *Handler) RegisterRoutes(r fiber.Router) {
 }
 
 // GoogleLogin godoc
-// @Summary Login with Google
-// @Description Redirects to Google OAuth consent screen
+// @Summary Get Google login URL
+// @Description Returns Google OAuth authorization URL and state parameter for the frontend
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Success 302 {string} string "Redirect to Google"
+// @Success 200 {object} response.Data[dto.OauthGetURLResponse]
 // @Failure 500 {object} response.Error
 // @Router /oauth/google/login [get]
 func (h *Handler) GoogleLogin(ctx *fiber.Ctx) error {
-	url := h.service.GetGoogleAuthURL()
-
-	if err := ctx.Redirect(url); err != nil {
-		h.logger.Error("http - v1 - auth - google login - redirect error: %w", err)
+	res, err := h.service.GetGoogleAuthURL()
+	if err != nil {
+		h.logger.Error("http - v1 - auth - google login - " + err.Error())
 
 		return response.WithError(ctx, err)
 	}
 
-	return nil
+	return response.WithJSON(ctx, fiber.StatusOK, res)
 }
 
 // GoogleCallback godoc
 // @Summary Google OAuth callback
-// @Description Handle the Google OAuth callback and return JWT tokens
+// @Description Handle the Google OAuth callback and redirect to frontend with JWT tokens
 // @Tags auth
 // @Accept json
 // @Produce json
 // @Param code query string true "Authorization code from Google"
-// @Success 200 {object} response.Data[dto.UserLoginResponse]
+// @Param state query string true "State parameter for CSRF protection"
+// @Param redirect_uri query string false "Frontend URI to redirect to with tokens"
+// @Success 302 {string} string "Redirect to frontend with tokens"
 // @Failure 400 {object} response.Error
 // @Failure 500 {object} response.Error
 // @Router /oauth/google/callback [get]
@@ -77,6 +81,24 @@ func (h *Handler) GoogleCallback(ctx *fiber.Ctx) error {
 		return response.WithError(ctx, ErrGoogleLoginCode)
 	}
 
+	state := ctx.Query("state")
+	if state == "" {
+		h.logger.Error("http - v1 - auth - google callback - state is empty")
+
+		return response.WithError(ctx, errors.New("oauth: state parameter is required")) //nolint:err113
+	}
+
+	// @TODO: Validate state parameter here if needed
+
+	redirectURI := h.cfg.OAuth.Google.FrontendURL
+	if redirectURI == "" {
+		h.logger.Error("http - v1 - auth - google callback - redirect URI is not set")
+
+		err := errors.New("redirect URI is not set in configuration") //nolint:err113
+
+		return response.WithError(ctx, err)
+	}
+
 	data, err := h.service.HandleGoogleCallback(ctx.Context(), code)
 	if err != nil {
 		reqID := "unknown"
@@ -86,8 +108,12 @@ func (h *Handler) GoogleCallback(ctx *fiber.Ctx) error {
 
 		h.logger.Error("http - v1 - auth - google callback - request_id: " + reqID + " - " + err.Error())
 
-		return response.WithError(ctx, err)
+		return ctx.Redirect(redirectURI + "?error=" + err.Error())
 	}
 
-	return response.WithJSON(ctx, fiber.StatusOK, data)
+	path := "/oauth/callback"
+	redirectURL := fmt.Sprintf("%s%s?access_token=%s&refresh_token=%s&state=%s",
+		redirectURI, path, data.AccessToken, data.RefreshToken, state)
+
+	return ctx.Redirect(redirectURL)
 }

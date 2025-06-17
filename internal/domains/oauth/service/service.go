@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/savioruz/goth/pkg/failure"
+	"github.com/savioruz/goth/pkg/helper"
 	"github.com/savioruz/goth/pkg/logger"
 	"github.com/savioruz/goth/pkg/postgres"
 
@@ -16,7 +17,7 @@ import (
 )
 
 type OAuthService interface {
-	GetGoogleAuthURL() string
+	GetGoogleAuthURL() (dto.OauthGetURLResponse, error)
 	HandleGoogleCallback(ctx context.Context, code string) (res *dto.UserLoginResponse, err error)
 }
 
@@ -36,8 +37,22 @@ func New(db postgres.PgxIface, repo repository.Querier, googleProvider oauth.Goo
 	}
 }
 
-func (s *oauthService) GetGoogleAuthURL() string {
-	return s.googleProvider.GetAuthURL()
+func (s *oauthService) GetGoogleAuthURL() (res dto.OauthGetURLResponse, err error) {
+	state := helper.GenerateStateToken()
+
+	url := s.googleProvider.GetAuthURL(state)
+	if url == "" {
+		s.logger.Error("oauth - service - failed to get Google auth URL")
+
+		return res, failure.InternalError(errors.New("failed to get Google auth URL")) //nolint:err113
+	}
+
+	res = dto.OauthGetURLResponse{
+		URL:   url,
+		State: state,
+	}
+
+	return res, nil
 }
 
 func (s *oauthService) HandleGoogleCallback(ctx context.Context, code string) (res *dto.UserLoginResponse, err error) {

@@ -87,6 +87,7 @@ type (
 		ClientID     string `env:"OAUTH_GOOGLE_CLIENT_ID,required"`
 		ClientSecret string `env:"OAUTH_GOOGLE_CLIENT_SECRET,required"`
 		RedirectURL  string `env:"OAUTH_GOOGLE_REDIRECT_URL,required"`
+		FrontendURL  string `env:"OAUTH_GOOGLE_FRONTEND_URL,required"`
 	}
 
 	Xendit struct {

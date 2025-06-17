@@ -37,8 +37,8 @@ func NewGoogleProvider(clientID, clientSecret, redirectURL string) *GoogleProvid
 	}
 }
 
-func (p *GoogleProvider) GetAuthURL() string {
-	return p.config.AuthCodeURL("state")
+func (p *GoogleProvider) GetAuthURL(state string) string {
+	return p.config.AuthCodeURL(state)
 }
 
 func (p *GoogleProvider) Exchange(code string) (*oauth2.Token, error) {

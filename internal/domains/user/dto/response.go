@@ -18,6 +18,11 @@ type UserProfileResponse struct {
 	ProfileImage string `json:"profile_image"`
 }
 
+type OauthGetURLResponse struct {
+	URL   string `json:"url"`
+	State string `json:"state"`
+}
+
 func (u *UserRegisterResponse) ToRegisterResponse(user repository.User) *UserRegisterResponse {
 	return &UserRegisterResponse{
 		ID:    user.ID.String(),

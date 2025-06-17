@@ -1,6 +1,8 @@
 package helper
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"github.com/savioruz/goth/pkg/constant"
 	"sort"
@@ -65,4 +67,16 @@ func IsBookingTimeValid(bookingDate string, startTimeStr string) (bool, error) {
 	)
 
 	return bookingDateTime.After(time.Now()), nil
+}
+
+func GenerateStateToken() string {
+	const length = 16
+	b := make([]byte, length)
+
+	_, err := rand.Read(b)
+	if err != nil {
+		return time.Now().String()
+	}
+
+	return base64.URLEncoding.EncodeToString(b)
 }
