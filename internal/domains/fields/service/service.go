@@ -483,6 +483,7 @@ func (s *fieldService) UploadImages(ctx context.Context, fieldID string, files [
 
 		url, err := s.storageClient.UploadFile(ctx, fileHandle, file.Filename)
 		fileHandle.Close() // Close the file handle immediately after use
+
 		if err != nil {
 			s.logger.Error(identifier, "uploadImages - failed to upload file %s: %w", file.Filename, err)
 

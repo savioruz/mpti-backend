@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -338,12 +337,6 @@ func (h *Handler) UploadImages(ctx *fiber.Ctx) error {
 		h.logger.Error(identifier, "uploadImages - validate error: %w", err)
 
 		return response.WithError(ctx, err)
-	}
-
-	// Enforce max upload size
-	if err := ctx.LimitBody(constant.MaxUploadSize); err != nil {
-		h.logger.Error(identifier, "uploadImages - body size exceeds limit: %w", err)
-		return response.WithError(ctx, failure.BadRequestFromString(fmt.Sprintf("body size exceeds %d bytes", constant.MaxUploadSize)))
 	}
 
 	form, err := ctx.MultipartForm()
