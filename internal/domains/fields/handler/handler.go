@@ -340,8 +340,11 @@ func (h *Handler) UploadImages(ctx *fiber.Ctx) error {
 		return response.WithError(ctx, err)
 	}
 
-	// Set max upload size
-	ctx.Request().Header.Set("Content-Length", strconv.Itoa(constant.MaxUploadSize))
+	// Enforce max upload size
+	if err := ctx.LimitBody(constant.MaxUploadSize); err != nil {
+		h.logger.Error(identifier, "uploadImages - body size exceeds limit: %w", err)
+		return response.WithError(ctx, failure.BadRequestFromString(fmt.Sprintf("body size exceeds %d bytes", constant.MaxUploadSize)))
+	}
 
 	form, err := ctx.MultipartForm()
 	if err != nil {
