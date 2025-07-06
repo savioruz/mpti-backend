@@ -5,6 +5,7 @@ package app
 
 import (
 	"fmt"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/wire"
@@ -43,6 +44,7 @@ import (
 	"github.com/savioruz/goth/pkg/oauth"
 	"github.com/savioruz/goth/pkg/postgres"
 	"github.com/savioruz/goth/pkg/redis"
+	"github.com/savioruz/goth/pkg/supabase"
 )
 
 // Application represents the dependency-injected app
@@ -135,6 +137,7 @@ func InitializeApp(cfg *config.Config) (*Application, error) {
 		provideRedisCache,
 		provideJWT,
 		provideGoogleOAuth,
+		provideSupabaseClient,
 
 		domains,
 
@@ -205,6 +208,16 @@ func provideValidator() *validator.Validate {
 
 func provideGoogleOAuth(cfg *config.Config) oauth.GoogleProviderIface {
 	return oauth.NewGoogleProvider(cfg.OAuth.Google.ClientID, cfg.OAuth.Google.ClientSecret, cfg.OAuth.Google.RedirectURL)
+}
+
+func provideSupabaseClient(cfg *config.Config, l logger.Interface) (*supabase.Client, error) {
+	return supabase.NewClient(supabase.Config{
+		AccessKeyID:     cfg.Supabase.AccessKeyID,
+		SecretAccessKey: cfg.Supabase.SecretAccessKey,
+		EndpointURL:     cfg.Supabase.EndpointURL,
+		Region:          cfg.Supabase.Region,
+		BucketName:      cfg.Supabase.BucketName,
+	})
 }
 
 func provideHTTPServer(cfg *config.Config, app *fiber.App) *httpserver.Server {
