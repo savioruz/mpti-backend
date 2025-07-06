@@ -8,6 +8,7 @@ type FieldCreateRequest struct {
 	Type        string    `json:"type" validate:"required,min=5,max=100"`
 	Price       int64     `json:"price" validate:"numeric,required,min=5000"`
 	Description string    `json:"description" validate:"omitempty"`
+	Images      []string  `json:"images" validate:"omitempty,dive,url"`
 }
 
 type FieldUpdateRequest struct {
@@ -16,4 +17,5 @@ type FieldUpdateRequest struct {
 	Type        string    `json:"type" validate:"omitempty,min=5,max=100"`
 	Price       int64     `json:"price" validate:"omitempty,numeric,min=5000"`
 	Description string    `json:"description" validate:"omitempty"`
+	Images      []string  `json:"images" validate:"omitempty,dive,url"`
 }

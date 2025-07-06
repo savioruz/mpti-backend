@@ -60,6 +60,18 @@ const (
 	PaginationDefaultPage  = 1
 )
 
+const (
+	// File upload constants
+	MaxUploadSize = 5 << 20 // 50MB total
+
+	// Valid image content types
+	ContentTypeJPEG = "image/jpeg"
+	ContentTypeJPG  = "image/jpg"
+	ContentTypePNG  = "image/png"
+	ContentTypeGIF  = "image/gif"
+	ContentTypeWEBP = "image/webp"
+)
+
 var (
 	ErrInvalidContextUserType = errors.New("invalid user type in context")
 )
