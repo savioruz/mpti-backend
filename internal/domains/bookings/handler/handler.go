@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/savioruz/goth/internal/delivery/http/middleware"
@@ -38,8 +39,8 @@ func (h *Handler) RegisterRoutes(r fiber.Router) {
 	bookings := r.Group(routepath)
 
 	bookings.Post("/", middleware.Jwt(), h.CreateBooking)
-	bookings.Get("/:id", middleware.Jwt(), h.GetBookingByID)
-	bookings.Post("/slots", middleware.Jwt(), h.GetBookedSlots)
+	bookings.Get("/:id", h.GetBookingByID)
+	bookings.Post("/slots", h.GetBookedSlots)
 	bookings.Put("/:id/cancel", middleware.Jwt(), h.CancelUserBooking)
 
 	r.Get("/users/bookings", middleware.Jwt(), h.GetUserBookings)
@@ -156,7 +157,6 @@ func (h *Handler) GetBookingByID(ctx *fiber.Ctx) error {
 // @Failure 400 {object} response.Error
 // @Failure 500 {object} response.Error
 // @Router /users/bookings [get]
-// @Security BearerAuth
 func (h *Handler) GetUserBookings(ctx *fiber.Ctx) error {
 	userRaw := ctx.Locals(constant.JwtFieldUser)
 	if userRaw == nil {
@@ -200,7 +200,6 @@ func (h *Handler) GetUserBookings(ctx *fiber.Ctx) error {
 // @Failure 400 {object} response.Error
 // @Failure 500 {object} response.Error
 // @Router /bookings/slots [post]
-// @Security BearerAuth
 func (h *Handler) GetBookedSlots(ctx *fiber.Ctx) error {
 	var req dto.GetBookedSlotsRequest
 	if err := ctx.BodyParser(&req); err != nil {
