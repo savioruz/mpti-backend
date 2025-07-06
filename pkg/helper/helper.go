@@ -4,9 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"github.com/savioruz/goth/pkg/constant"
 	"sort"
 	"time"
+
+	"github.com/savioruz/goth/pkg/constant"
 )
 
 // GenerateUniqueKey generates a unique key based on the provided map
@@ -79,4 +80,23 @@ func GenerateStateToken() string {
 	}
 
 	return base64.URLEncoding.EncodeToString(b)
+}
+
+// IsValidImageType checks if the content type is a valid image type
+func IsValidImageType(contentType string) bool {
+	validTypes := []string{
+		constant.ContentTypeJPEG,
+		constant.ContentTypeJPG,
+		constant.ContentTypePNG,
+		constant.ContentTypeGIF,
+		constant.ContentTypeWEBP,
+	}
+
+	for _, validType := range validTypes {
+		if contentType == validType {
+			return true
+		}
+	}
+
+	return false
 }

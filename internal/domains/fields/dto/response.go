@@ -7,14 +7,15 @@ import (
 )
 
 type FieldResponse struct {
-	ID          string `json:"id"`
-	LocationID  string `json:"location_id"`
-	Name        string `json:"name"`
-	Type        string `json:"type"`
-	Price       int64  `json:"price"`
-	Description string `json:"description"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	ID          string   `json:"id"`
+	LocationID  string   `json:"location_id"`
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`
+	Price       int64    `json:"price"`
+	Description string   `json:"description"`
+	Images      []string `json:"images"`
+	CreatedAt   string   `json:"created_at"`
+	UpdatedAt   string   `json:"updated_at"`
 }
 
 func (f FieldResponse) FromModel(model repository.Field) FieldResponse {
@@ -25,6 +26,7 @@ func (f FieldResponse) FromModel(model repository.Field) FieldResponse {
 		Type:        model.Type,
 		Price:       helper.Int64FromPg(model.Price),
 		Description: model.Description.String,
+		Images:      model.Images,
 		CreatedAt:   model.CreatedAt.Time.Format(constant.FullDateFormat),
 		UpdatedAt:   model.UpdatedAt.Time.Format(constant.FullDateFormat),
 	}
@@ -39,13 +41,6 @@ type GetFieldsResponse struct {
 func (f *GetFieldsResponse) FromModel(fields []repository.Field, totalItems, limit int) {
 	f.TotalItems = totalItems
 	f.TotalPages = helper.CalculateTotalPages(totalItems, limit)
-
-	if len(fields) == 0 {
-		f.Fields = []FieldResponse{}
-
-		return
-	}
-
 	f.Fields = make([]FieldResponse, len(fields))
 
 	for i, field := range fields {

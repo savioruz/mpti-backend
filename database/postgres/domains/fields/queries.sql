@@ -1,6 +1,6 @@
 -- name: CreateField :one
-INSERT INTO fields (location_id, name, type, price, description)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO fields (location_id, name, type, price, description, images)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id;
 
 -- name: GetFieldById :one
@@ -37,6 +37,7 @@ UPDATE fields SET
     type = $4,
     price = $5,
     description = $6,
+    images = $7,
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING id;

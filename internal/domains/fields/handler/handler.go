@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/savioruz/goth/internal/delivery/http/middleware"
@@ -10,6 +12,7 @@ import (
 	"github.com/savioruz/goth/pkg/constant"
 	"github.com/savioruz/goth/pkg/failure"
 	"github.com/savioruz/goth/pkg/gdto"
+	"github.com/savioruz/goth/pkg/helper"
 	"github.com/savioruz/goth/pkg/logger"
 )
 
@@ -41,6 +44,10 @@ func (h *Handler) RegisterRoutes(r fiber.Router) {
 	fields.Get("/", h.GetAll)
 	fields.Patch("/:id", middleware.Jwt(), middleware.AdminOnly(), h.Update)
 	fields.Delete("/:id", middleware.Jwt(), middleware.AdminOnly(), h.Delete)
+
+	// Image upload routes
+	fields.Post("/:id/images", middleware.Jwt(), middleware.AdminOnly(), h.UploadImages)
+	fields.Delete("/:id/images", middleware.Jwt(), middleware.AdminOnly(), h.DeleteImage)
 
 	r.Get("/locations/:location_id/fields", h.GetByLocationID)
 }
@@ -307,4 +314,124 @@ func (h *Handler) GetByLocationID(ctx *fiber.Ctx) error {
 	}
 
 	return response.WithJSON(ctx, fiber.StatusOK, data)
+}
+
+// UploadImages godoc
+// @Summary Upload images for field
+// @Description Upload multiple images for a field
+// @Tags fields
+// @Accept multipart/form-data
+// @Produce json
+// @Param id path string true "Field ID"
+// @Param images formData file true "Images to upload"
+// @Success 200 {object} response.Data[[]string]
+// @Failure 400 {object} response.Error
+// @Failure 404 {object} response.Error
+// @Failure 500 {object} response.Error
+// @Router /fields/{id}/images [post]
+// @Security BearerAuth
+func (h *Handler) UploadImages(ctx *fiber.Ctx) error {
+	fieldID := ctx.Params(constant.RequestParamID)
+	if err := h.validator.Var(fieldID, constant.RequestValidateUUID); err != nil {
+		err = failure.BadRequestFromString("invalid field id format")
+		h.logger.Error(identifier, "uploadImages - validate error: %w", err)
+
+		return response.WithError(ctx, err)
+	}
+
+	form, err := ctx.MultipartForm()
+	if err != nil {
+		h.logger.Error(identifier, "uploadImages - failed to parse multipart form: %w", err)
+
+		return response.WithError(ctx, failure.BadRequestFromString("failed to parse multipart form"))
+	}
+
+	files := form.File["images"]
+	if len(files) == 0 {
+		err = failure.BadRequestFromString("no images uploaded")
+		h.logger.Error(identifier, "uploadImages - no images uploaded: %w", err)
+
+		return response.WithError(ctx, err)
+	}
+
+	var totalSize int64
+	for _, file := range files {
+		totalSize += file.Size
+		if totalSize > constant.MaxUploadSize {
+			err = failure.BadRequestFromString(fmt.Sprintf("total upload size exceeds %d bytes", constant.MaxUploadSize))
+
+			h.logger.Error(identifier, "uploadImages - total size too large: %d bytes", totalSize)
+
+			return response.WithError(ctx, err)
+		}
+
+		if !helper.IsValidImageType(file.Header.Get("Content-Type")) {
+			err = failure.BadRequestFromString("invalid file type. Only JPEG, PNG, GIF, and WebP are allowed")
+
+			h.logger.Error(identifier, "uploadImages - invalid file type: %s", file.Header.Get("Content-Type"))
+
+			return response.WithError(ctx, err)
+		}
+	}
+
+	urls, err := h.service.UploadImages(ctx.UserContext(), fieldID, files)
+	if err != nil {
+		reqID := "unknown"
+		if id, ok := ctx.Locals("request_id").(string); ok {
+			reqID = id
+		}
+
+		h.logger.Error("http - field - upload images - request_id: " + reqID + " - " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	return response.WithJSON(ctx, fiber.StatusOK, urls)
+}
+
+// DeleteImage godoc
+// @Summary Delete image from field
+// @Description Delete an image from a field
+// @Tags fields
+// @Accept json
+// @Produce json
+// @Param id path string true "Field ID"
+// @Param imageURL query string true "Image URL to delete"
+// @Success 200 {object} response.Data[string]
+// @Failure 400 {object} response.Error
+// @Failure 404 {object} response.Error
+// @Failure 500 {object} response.Error
+// @Security BearerAuth
+// @Router /fields/{id}/images [delete]
+func (h *Handler) DeleteImage(ctx *fiber.Ctx) error {
+	fieldID := ctx.Params(constant.RequestParamID)
+	if err := h.validator.Var(fieldID, constant.RequestValidateUUID); err != nil {
+		err = failure.BadRequestFromString("invalid field id format")
+		h.logger.Error(identifier, "deleteImage - validate error: %w", err)
+
+		return response.WithError(ctx, err)
+	}
+
+	imageURL := ctx.Query("imageURL")
+	if imageURL == "" {
+		err := failure.BadRequestFromString("imageURL query parameter is required")
+
+		h.logger.Error(identifier, "deleteImage - imageURL not provided")
+
+		return response.WithError(ctx, err)
+	}
+
+	err := h.service.DeleteImage(ctx.UserContext(), fieldID, imageURL)
+	if err != nil {
+		reqID := "unknown"
+		if id, ok := ctx.Locals("request_id").(string); ok {
+			reqID = id
+		}
+
+		h.logger.Error("http - field - delete image - request_id: " + reqID + " - " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	return response.WithJSON(ctx, fiber.StatusOK, "image deleted successfully")
 }

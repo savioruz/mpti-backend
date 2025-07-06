@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+
 	"github.com/caarlos0/env/v11"
 )
 
@@ -19,6 +20,7 @@ type (
 		JWT      JWT
 		OAuth    OAuth
 		Xendit   Xendit
+		Supabase Supabase
 	}
 
 	App struct {
@@ -93,6 +95,14 @@ type (
 	Xendit struct {
 		APIKey        string `env:"XENDIT_API_KEY,required"`
 		CallbackToken string `env:"XENDIT_CALLBACK_TOKEN,required"`
+	}
+
+	Supabase struct {
+		AccessKeyID     string `env:"SUPABASE_AWS_ACCESS_KEY_ID,required"`
+		SecretAccessKey string `env:"SUPABASE_AWS_SECRET_ACCESS_KEY,required"`
+		EndpointURL     string `env:"SUPABASE_ENDPOINT_URL,required"`
+		Region          string `env:"SUPABASE_REGION,required"`
+		BucketName      string `env:"SUPABASE_BUCKET_NAME,required"`
 	}
 )
 
