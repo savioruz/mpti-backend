@@ -42,5 +42,5 @@ UPDATE fields SET
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING id;
 
--- name: DeleteField :one
-UPDATE fields SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING id;
+-- name: DeleteField :exec
+DELETE FROM fields WHERE id = $1 AND deleted_at IS NULL;

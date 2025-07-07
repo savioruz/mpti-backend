@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5"
 	"github.com/savioruz/goth/config"
 	"github.com/savioruz/goth/internal/domains/fields/dto"
@@ -29,7 +30,7 @@ type FieldService interface {
 	GetByLocationID(ctx context.Context, locationID string, req gdto.PaginationRequest) (dto.GetFieldsResponse, error)
 	CountByLocationID(ctx context.Context, locationID string, req gdto.PaginationRequest) (int, error)
 	Update(ctx context.Context, id string, req dto.FieldUpdateRequest) (string, error)
-	Delete(ctx context.Context, id string) (string, error)
+	Delete(ctx context.Context, id string) error
 	UploadImages(ctx context.Context, fieldID string, files []*multipart.FileHeader) ([]string, error)
 	DeleteImage(ctx context.Context, fieldID, imageURL string) error
 }
@@ -402,23 +403,41 @@ func (s *fieldService) Update(ctx context.Context, id string, req dto.FieldUpdat
 	return res, nil
 }
 
-func (s *fieldService) Delete(ctx context.Context, id string) (res string, err error) {
-	existingField, err := s.repo.DeleteField(ctx, s.db, helper.PgUUID(id))
+func (s *fieldService) Delete(ctx context.Context, id string) (err error) {
+	existingField, err := s.repo.GetFieldById(ctx, s.db, helper.PgUUID(id))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			err = failure.NotFound(fmt.Sprintf("fields %s - not found", id))
 		}
 
-		s.logger.Error(identifier, "delete - failed get field: %w", err)
+		s.logger.Error(identifier, "delete - failed to get field: %w", err)
 
-		return res, err
+		return err
 	}
 
-	res = existingField.String()
+	err = s.repo.DeleteField(ctx, s.db, helper.PgUUID(id))
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			err = failure.Conflict("field used by other entities")
+		}
+
+		s.logger.Error(identifier, "delete - failed to delete field: %w", err)
+
+		return err
+	}
 
 	go func() {
 		ctx := context.WithoutCancel(ctx)
 
+		// Delete images from storage
+		for _, imageURL := range existingField.Images {
+			if deleteErr := s.storageClient.DeleteFile(ctx, imageURL); deleteErr != nil {
+				s.logger.Error(identifier, "delete - failed to delete image %s from storage: %w", imageURL, deleteErr)
+			}
+		}
+
+		// Clear cache
 		if err := s.cache.Delete(ctx, helper.BuildCacheKey(cacheGetFieldKey, id)); err != nil {
 			s.logger.Error(identifier, "delete - failed to delete cache: %w", err)
 		}
@@ -432,7 +451,7 @@ func (s *fieldService) Delete(ctx context.Context, id string) (res string, err e
 		}
 	}()
 
-	return res, nil
+	return nil
 }
 
 func (s *fieldService) UploadImages(ctx context.Context, fieldID string, files []*multipart.FileHeader) (urls []string, err error) {
