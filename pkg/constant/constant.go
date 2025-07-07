@@ -51,6 +51,7 @@ const (
 
 const (
 	UserRoleAdmin = "9"
+	UserRoleStaff = "2"
 	UserRoleUser  = "1"
 )
 

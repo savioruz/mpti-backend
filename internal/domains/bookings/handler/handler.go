@@ -103,7 +103,21 @@ func (h *Handler) CreateBooking(ctx *fiber.Ctx) error {
 		return response.WithError(ctx, constant.ErrInvalidContextUserType)
 	}
 
-	res, err := h.service.CreateBooking(ctx.Context(), req, user, email)
+	roleRaw := ctx.Locals(constant.JwtFieldLevel)
+	if roleRaw == nil {
+		h.logger.Error(identifier, "role not found in context")
+
+		return response.WithError(ctx, failure.Unauthorized("role information not found"))
+	}
+
+	userRole, ok := roleRaw.(string)
+	if !ok {
+		h.logger.Error(identifier, "invalid role type in context")
+
+		return response.WithError(ctx, constant.ErrInvalidContextUserType)
+	}
+
+	res, err := h.service.CreateBooking(ctx.Context(), req, user, email, userRole)
 	if err != nil {
 		h.logger.Error(identifier, "error creating booking: "+err.Error())
 
