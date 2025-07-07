@@ -26,6 +26,8 @@ const (
 	BookingCanceledBySystem = "system"
 )
 
+var PaymentUnknownMethod = "unknown"
+
 const (
 	PaymentCurrencyIDR = "IDR"
 

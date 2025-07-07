@@ -170,10 +170,15 @@ func (s *paymentService) Callbacks(ctx context.Context, req dto.CallbackPaymentI
 		paymentStatus = constant.PaymentStatusPending
 	}
 
+	paymentMethod := req.PaymentMethod
+	if paymentMethod == nil {
+		paymentMethod = &constant.PaymentUnknownMethod
+	}
+
 	if err := s.repo.UpdatePaymentStatus(ctx, tx, repository.UpdatePaymentStatusParams{
 		TransactionID: req.ExternalID,
 		PaymentStatus: paymentStatus,
-		PaymentMethod: *req.PaymentMethod,
+		PaymentMethod: *paymentMethod,
 		PaidAt:        helper.PgTimestamp(time.Now()),
 	}); err != nil {
 		s.logger.Error(identifier, " - Callbacks - failed to update payment status: %v", err)
