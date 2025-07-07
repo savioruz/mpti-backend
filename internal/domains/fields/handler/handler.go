@@ -247,7 +247,7 @@ func (h *Handler) Delete(ctx *fiber.Ctx) error {
 		return response.WithError(ctx, failure.BadRequestFromString("id is required"))
 	}
 
-	res, err := h.service.Delete(ctx.UserContext(), id)
+	err := h.service.Delete(ctx.UserContext(), id)
 	if err != nil {
 		reqID := "unknown"
 		if id, ok := ctx.Locals("request_id").(string); ok {
@@ -259,7 +259,7 @@ func (h *Handler) Delete(ctx *fiber.Ctx) error {
 		return response.WithError(ctx, err)
 	}
 
-	return response.WithMessage(ctx, fiber.StatusOK, res)
+	return response.WithMessage(ctx, fiber.StatusOK, id)
 }
 
 // GetByLocationID Field godoc

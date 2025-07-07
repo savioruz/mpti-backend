@@ -21,5 +21,5 @@ WHERE deleted_at IS NULL
 UPDATE locations SET name = $1, latitude = $2, longitude = $3, description = $4, updated_at = now()
     WHERE id = $5 AND deleted_at IS NULL RETURNING *;
 
--- name: DeleteLocation :one
-UPDATE locations SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING *;
+-- name: DeleteLocation :exec
+DELETE FROM locations WHERE id = $1 AND deleted_at IS NULL;

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/savioruz/goth/config"
 	"github.com/savioruz/goth/internal/domains/locations/dto"
 	"github.com/savioruz/goth/internal/domains/locations/repository"
@@ -24,7 +25,7 @@ type LocationService interface {
 	Count(ctx context.Context, filter string) (res int, err error)
 	GetAll(ctx context.Context, req gdto.PaginationRequest) (res dto.PaginatedLocationResponse, err error)
 	Update(ctx context.Context, id string, req dto.UpdateLocationRequest) (res string, err error)
-	Delete(ctx context.Context, id string) (res string, err error)
+	Delete(ctx context.Context, id string) (err error)
 }
 
 type locationService struct {
@@ -284,19 +285,22 @@ func (s *locationService) Update(ctx context.Context, id string, req dto.UpdateL
 	return res, nil
 }
 
-func (s *locationService) Delete(ctx context.Context, id string) (res string, err error) {
-	existingLocation, err := s.repo.DeleteLocation(ctx, s.db, helper.PgUUID(id))
+func (s *locationService) Delete(ctx context.Context, id string) (err error) {
+	err = s.repo.DeleteLocation(ctx, s.db, helper.PgUUID(id))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			err = failure.NotFound(fmt.Sprintf("location %s - not found", id))
 		}
 
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			err = failure.Conflict("location used by other entities")
+		}
+
 		s.logger.Error(identifier, "delete - failed to get location by id: %w", err)
 
-		return res, err
+		return err
 	}
-
-	res = existingLocation.ID.String()
 
 	go func() {
 		ctx := context.WithoutCancel(ctx)
@@ -314,5 +318,5 @@ func (s *locationService) Delete(ctx context.Context, id string) (res string, er
 		}
 	}()
 
-	return res, nil
+	return nil
 }

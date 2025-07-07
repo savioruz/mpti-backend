@@ -19,6 +19,10 @@ type FieldResponse struct {
 }
 
 func (f FieldResponse) FromModel(model repository.Field) FieldResponse {
+	if len(model.Images) == 0 {
+		model.Images = []string{}
+	}
+
 	return FieldResponse{
 		ID:          model.ID.String(),
 		LocationID:  model.LocationID.String(),

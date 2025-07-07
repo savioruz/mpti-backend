@@ -243,12 +243,12 @@ func (h *Handler) Delete(ctx *fiber.Ctx) error {
 		return response.WithError(ctx, err)
 	}
 
-	res, err := h.service.Delete(ctx.UserContext(), id)
+	err := h.service.Delete(ctx.UserContext(), id)
 	if err != nil {
 		h.logger.Error(identifier, "delete - failed to delete location: %w", err)
 
 		return response.WithError(ctx, err)
 	}
 
-	return response.WithMessage(ctx, fiber.StatusOK, res)
+	return response.WithMessage(ctx, fiber.StatusOK, id)
 }
