@@ -11,7 +11,13 @@ ORDER BY created_at DESC;
 SELECT * FROM payments
 WHERE ($1::text = '' OR payment_method ILIKE '%' || $1 || '%')
   AND ($2::text = '' OR payment_status ILIKE '%' || $2 || '%')
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT $3 OFFSET $4;
+
+-- name: CountPayments :one
+SELECT COUNT(*) FROM payments
+WHERE ($1::text = '' OR payment_method ILIKE '%' || $1 || '%')
+  AND ($2::text = '' OR payment_status ILIKE '%' || $2 || '%');
 
 -- name: UpdatePaymentStatus :exec
 UPDATE payments

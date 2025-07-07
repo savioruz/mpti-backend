@@ -245,19 +245,6 @@ func (s *paymentService) GetPayments(ctx context.Context, req dto.GetPaymentsReq
 		return res, failure.BadRequestFromString("validation error: " + err.Error())
 	}
 
-	payments, err := s.repo.GetPayments(ctx, s.db, repository.GetPaymentsParams{
-		Column1: req.PaymentMethod,
-		Column2: req.PaymentStatus,
-	})
-	if err != nil {
-		s.logger.Error(identifier, " - GetPayments - failed to get payments: %v", err)
-
-		return res, failure.InternalError(err)
-	}
-
-	// Apply pagination logic manually since the query doesn't support it yet
-	totalItems := len(payments)
-
 	// Set default pagination values
 	page := req.Page
 	if page <= 0 {
@@ -269,25 +256,32 @@ func (s *paymentService) GetPayments(ctx context.Context, req dto.GetPaymentsReq
 		limit = 10
 	}
 
-	// Calculate pagination
-	startIndex := (page - 1) * limit
-	endIndex := startIndex + limit
+	offset := (page - 1) * limit
 
-	if startIndex >= totalItems {
-		// No data for this page
-		res.FromModel([]repository.Payment{}, totalItems, limit)
+	totalCount, err := s.repo.CountPayments(ctx, s.db, repository.CountPaymentsParams{
+		Column1: req.PaymentMethod,
+		Column2: req.PaymentStatus,
+	})
+	if err != nil {
+		s.logger.Error(identifier, " - GetPayments - failed to count payments: %v", err)
 
-		return res, nil
+		return res, failure.InternalError(err)
 	}
 
-	if endIndex > totalItems {
-		endIndex = totalItems
+	// Get paginated payments
+	payments, err := s.repo.GetPayments(ctx, s.db, repository.GetPaymentsParams{
+		Column1: req.PaymentMethod,
+		Column2: req.PaymentStatus,
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		s.logger.Error(identifier, " - GetPayments - failed to get payments: %v", err)
+
+		return res, failure.InternalError(err)
 	}
 
-	// Get the slice for the current page
-	paginatedPayments := payments[startIndex:endIndex]
-
-	res.FromModel(paginatedPayments, totalItems, limit)
+	res.FromModel(payments, int(totalCount), limit)
 
 	return res, nil
 }
