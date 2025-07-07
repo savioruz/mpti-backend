@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/jackc/pgx/v5/pgconn"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/savioruz/goth/config"
 	"github.com/savioruz/goth/internal/domains/fields/dto"
@@ -449,6 +448,179 @@ func (s *fieldService) Delete(ctx context.Context, id string) (err error) {
 
 		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "*")); err != nil {
 			s.logger.Error(identifier, "delete - failed to clear cache: %w", err)
+		}
+	}()
+
+	return nil
+}
+
+func (s *fieldService) UploadImages(ctx context.Context, fieldID string, files []*multipart.FileHeader) (urls []string, err error) {
+	if len(files) == 0 {
+		err = failure.BadRequestFromString("no files uploaded")
+		s.logger.Error(identifier, "uploadImages - no files uploaded: %w", err)
+
+		return urls, err
+	}
+
+	if len(files) > MaxFilesPerUpload {
+		err = failure.BadRequestFromString(fmt.Sprintf("maximum %d files allowed per upload", MaxFilesPerUpload))
+
+		s.logger.Error(identifier, "uploadImages - too many files: %d", len(files))
+
+		return urls, err
+	}
+
+	// Get existing field to append new images
+	existingField, err := s.repo.GetFieldById(ctx, s.db, helper.PgUUID(fieldID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = failure.NotFound(fmt.Sprintf("field %s - not found", fieldID))
+		}
+
+		s.logger.Error(identifier, "uploadImages - failed to get field: %w", err)
+
+		return urls, err
+	}
+
+	var uploadedURLs []string
+
+	for _, file := range files {
+		// Check file size
+		if file.Size > MaxFileSize {
+			err = failure.BadRequestFromString(fmt.Sprintf("file %s exceeds maximum size of %d bytes", file.Filename, MaxFileSize))
+			s.logger.Error(identifier, "uploadImages - file too large: %s (%d bytes)", file.Filename, file.Size)
+
+			return urls, err
+		}
+
+		fileHandle, err := file.Open()
+		if err != nil {
+			s.logger.Error(identifier, "uploadImages - failed to open file %s: %w", file.Filename, err)
+
+			return urls, err
+		}
+
+		url, err := s.storageClient.UploadFile(ctx, fileHandle, file.Filename)
+		fileHandle.Close() // Close the file handle immediately after use
+
+		if err != nil {
+			s.logger.Error(identifier, "uploadImages - failed to upload file %s: %w", file.Filename, err)
+
+			return urls, err
+		}
+
+		uploadedURLs = append(uploadedURLs, url)
+	}
+
+	// Update field with new images (append to existing images)
+	existingField.Images = append(existingField.Images, uploadedURLs...)
+
+	if existingField.Images == nil {
+		existingField.Images = []string{}
+	}
+
+	_, err = s.repo.UpdateField(ctx, s.db, repository.UpdateFieldParams{
+		ID:          existingField.ID,
+		LocationID:  existingField.LocationID,
+		Name:        existingField.Name,
+		Type:        existingField.Type,
+		Price:       existingField.Price,
+		Description: existingField.Description,
+		Images:      existingField.Images,
+	})
+	if err != nil {
+		s.logger.Error(identifier, "uploadImages - failed to update field with new images: %w", err)
+
+		// Clean up uploaded files if database update fails
+		for _, url := range uploadedURLs {
+			if deleteErr := s.storageClient.DeleteFile(ctx, url); deleteErr != nil {
+				s.logger.Error(identifier, "uploadImages - failed to cleanup uploaded file %s: %w", url, deleteErr)
+			}
+		}
+
+		return urls, err
+	}
+
+	go func() {
+		ctx := context.WithoutCancel(ctx)
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetFieldKey, "*")); err != nil {
+			s.logger.Error(identifier, "uploadImages - failed to clear cache: %w", err)
+		}
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "*")); err != nil {
+			s.logger.Error(identifier, "uploadImages - failed to clear cache: %w", err)
+		}
+	}()
+
+	return uploadedURLs, nil
+}
+
+func (s *fieldService) DeleteImage(ctx context.Context, fieldID, imageURL string) error {
+	// Get existing field to remove image from the array
+	existingField, err := s.repo.GetFieldById(ctx, s.db, helper.PgUUID(fieldID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = failure.NotFound(fmt.Sprintf("field %s - not found", fieldID))
+		}
+
+		s.logger.Error(identifier, "deleteImage - failed to get field: %w", err)
+
+		return err
+	}
+
+	// Find and remove the image URL from the array
+	updatedImages := make([]string, 0) // Initialize as empty slice instead of nil
+	found := false
+
+	for _, img := range existingField.Images {
+		if img != imageURL {
+			updatedImages = append(updatedImages, img)
+		} else {
+			found = true
+		}
+	}
+
+	if !found {
+		err = failure.NotFound(fmt.Sprintf("image URL %s not found in field %s", imageURL, fieldID))
+		s.logger.Error(identifier, "deleteImage - image URL not found: %w", err)
+
+		return err
+	}
+
+	// Delete file from storage
+	err = s.storageClient.DeleteFile(ctx, imageURL)
+	if err != nil {
+		s.logger.Error(identifier, "deleteImage - failed to delete file %s: %w", imageURL, err)
+
+		return err
+	}
+
+	// Update field with removed image
+	_, err = s.repo.UpdateField(ctx, s.db, repository.UpdateFieldParams{
+		ID:          existingField.ID,
+		LocationID:  existingField.LocationID,
+		Name:        existingField.Name,
+		Type:        existingField.Type,
+		Price:       existingField.Price,
+		Description: existingField.Description,
+		Images:      updatedImages,
+	})
+	if err != nil {
+		s.logger.Error(identifier, "deleteImage - failed to update field after removing image: %w", err)
+
+		return err
+	}
+
+	go func() {
+		ctx := context.WithoutCancel(ctx)
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetFieldKey, "*")); err != nil {
+			s.logger.Error(identifier, "deleteImage - failed to clear cache: %w", err)
+		}
+
+		if err := s.cache.Clear(ctx, helper.BuildCacheKey(cacheGetFieldsKey, "*")); err != nil {
+			s.logger.Error(identifier, "deleteImage - failed to clear cache: %w", err)
 		}
 	}()
 
