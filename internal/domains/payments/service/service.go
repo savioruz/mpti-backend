@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 	"github.com/savioruz/goth/config"
@@ -17,12 +19,14 @@ import (
 	"github.com/savioruz/goth/pkg/redis"
 	"github.com/xendit/xendit-go/v7"
 	"github.com/xendit/xendit-go/v7/invoice"
-	"time"
 )
 
 type PaymentService interface {
-	CreateInvoice(ctx context.Context, req dto.CreatePaymentRequest) (dto.CreatePaymentResponse, error)
-	Callbacks(ctx context.Context, req dto.PaymentCallbackRequest, token string) error
+	CreateInvoice(ctx context.Context, req dto.CreatePaymentInvoice) (dto.CreatePaymentInvoiceResponse, error)
+	Callbacks(ctx context.Context, req dto.CallbackPaymentInvoice, token string) error
+	CreatePayments(ctx context.Context, req dto.CreatePaymentRequest) (string, error)
+	GetPayments(ctx context.Context, req dto.GetPaymentsRequest) (dto.PaginatedPaymentResponse, error)
+	GetPaymentsByBookingID(ctx context.Context, bookingID string) ([]dto.PaymentResponse, error)
 }
 
 type paymentService struct {
@@ -53,7 +57,7 @@ const (
 	identifier = "service - payments- %s"
 )
 
-func (s *paymentService) CreateInvoice(ctx context.Context, req dto.CreatePaymentRequest) (res dto.CreatePaymentResponse, err error) {
+func (s *paymentService) CreateInvoice(ctx context.Context, req dto.CreatePaymentInvoice) (res dto.CreatePaymentInvoiceResponse, err error) {
 	if err := s.validator.Struct(req); err != nil {
 		s.logger.Error(identifier, " - CreateInvoice - validation error: %v", err)
 
@@ -103,7 +107,7 @@ func (s *paymentService) CreateInvoice(ctx context.Context, req dto.CreatePaymen
 		}
 	}(tx, ctx)
 
-	model, err := s.repo.InsertPayment(ctx, tx, repository.InsertPaymentParams{
+	id, err := s.repo.InsertPayment(ctx, tx, repository.InsertPaymentParams{
 		BookingID:     helper.PgUUID(req.OrderID),
 		PaymentMethod: paymentMethod,
 		PaymentStatus: paymentStatus,
@@ -122,13 +126,13 @@ func (s *paymentService) CreateInvoice(ctx context.Context, req dto.CreatePaymen
 		paymentURL = invoiceResult.InvoiceUrl
 	}
 
-	res = dto.CreatePaymentResponse{
-		ID:         model.String(),
+	res = dto.CreatePaymentInvoiceResponse{
+		ID:         id.String(),
 		OrderID:    req.OrderID,
 		Amount:     req.Amount,
 		Status:     paymentStatus,
-		ExpiryDate: expiryDate,
-		PaymentURL: paymentURL,
+		ExpiryDate: &expiryDate,
+		PaymentURL: &paymentURL,
 	}
 
 	if err = tx.Commit(ctx); err != nil {
@@ -140,7 +144,7 @@ func (s *paymentService) CreateInvoice(ctx context.Context, req dto.CreatePaymen
 	return res, nil
 }
 
-func (s *paymentService) Callbacks(ctx context.Context, req dto.PaymentCallbackRequest, token string) (err error) {
+func (s *paymentService) Callbacks(ctx context.Context, req dto.CallbackPaymentInvoice, token string) (err error) {
 	if s.cfg.Xendit.CallbackToken != token {
 		s.logger.Error(identifier, " - Callbacks - invalid callback token: %s", token)
 
@@ -161,9 +165,20 @@ func (s *paymentService) Callbacks(ctx context.Context, req dto.PaymentCallbackR
 		}
 	}(tx, ctx)
 
+	paymentStatus := req.Status
+	if req.Status == "" {
+		paymentStatus = constant.PaymentStatusPending
+	}
+
+	paymentMethod := req.PaymentMethod
+	if paymentMethod == nil {
+		paymentMethod = &constant.PaymentUnknownMethod
+	}
+
 	if err := s.repo.UpdatePaymentStatus(ctx, tx, repository.UpdatePaymentStatusParams{
 		TransactionID: req.ExternalID,
-		PaymentStatus: req.Status,
+		PaymentStatus: paymentStatus,
+		PaymentMethod: *paymentMethod,
 		PaidAt:        helper.PgTimestamp(time.Now()),
 	}); err != nil {
 		s.logger.Error(identifier, " - Callbacks - failed to update payment status: %v", err)
@@ -197,4 +212,101 @@ func (s *paymentService) Callbacks(ctx context.Context, req dto.PaymentCallbackR
 	s.logger.Info(identifier, " - Callbacks - payment status updated successfully for transaction ID: %s", req.ExternalID)
 
 	return nil
+}
+
+func (s *paymentService) CreatePayments(ctx context.Context, req dto.CreatePaymentRequest) (id string, err error) {
+	if err := s.validator.Struct(req); err != nil {
+		s.logger.Error(identifier, " - CreatePayments - validation error: %v", err)
+
+		return "", failure.BadRequestFromString("validation error: " + err.Error())
+	}
+
+	var paymentStatus string
+	if req.PaymentMethod == constant.PaymentCashMethod {
+		paymentStatus = constant.PaymentStatusPaid
+	} else {
+		paymentStatus = constant.PaymentStatusPending
+	}
+
+	res, err := s.repo.InsertPayment(ctx, s.db, repository.InsertPaymentParams{
+		BookingID:     helper.PgUUID(req.BookingID),
+		PaymentMethod: req.PaymentMethod,
+		PaymentStatus: paymentStatus,
+		TransactionID: req.TransactionID,
+	})
+	if err != nil {
+		s.logger.Error(identifier, " - CreatePayments - failed to create payment: %v", err)
+
+		return "", failure.InternalError(err)
+	}
+
+	return res.String(), nil
+}
+
+func (s *paymentService) GetPayments(ctx context.Context, req dto.GetPaymentsRequest) (res dto.PaginatedPaymentResponse, err error) {
+	if err := s.validator.Struct(req); err != nil {
+		s.logger.Error(identifier, " - GetPayments - validation error: %v", err)
+
+		return res, failure.BadRequestFromString("validation error: " + err.Error())
+	}
+
+	// Set default pagination values
+	page := req.Page
+	if page <= 0 {
+		page = 1
+	}
+
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 10
+	}
+
+	offset := (page - 1) * limit
+
+	totalCount, err := s.repo.CountPayments(ctx, s.db, repository.CountPaymentsParams{
+		Column1: req.PaymentMethod,
+		Column2: req.PaymentStatus,
+	})
+	if err != nil {
+		s.logger.Error(identifier, " - GetPayments - failed to count payments: %v", err)
+
+		return res, failure.InternalError(err)
+	}
+
+	// Get paginated payments
+	payments, err := s.repo.GetPayments(ctx, s.db, repository.GetPaymentsParams{
+		Column1: req.PaymentMethod,
+		Column2: req.PaymentStatus,
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		s.logger.Error(identifier, " - GetPayments - failed to get payments: %v", err)
+
+		return res, failure.InternalError(err)
+	}
+
+	res.FromModel(payments, int(totalCount), limit)
+
+	return res, nil
+}
+
+func (s *paymentService) GetPaymentsByBookingID(ctx context.Context, bookingID string) (res []dto.PaymentResponse, err error) {
+	if bookingID == "" {
+		return res, failure.BadRequestFromString("booking ID is required")
+	}
+
+	payments, err := s.repo.GetPaymentsByBookingID(ctx, s.db, helper.PgUUID(bookingID))
+	if err != nil {
+		s.logger.Error(identifier, " - GetPaymentsByBookingID - failed to get payments: %v", err)
+
+		return res, failure.InternalError(err)
+	}
+
+	paymentResponses := make([]dto.PaymentResponse, len(payments))
+	for i, payment := range payments {
+		paymentResponses[i] = dto.PaymentResponse{}.FromModel(payment)
+	}
+
+	return paymentResponses, nil
 }

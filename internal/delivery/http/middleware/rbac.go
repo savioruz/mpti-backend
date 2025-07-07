@@ -32,3 +32,8 @@ func CheckRole(allowedRoles ...string) fiber.Handler {
 func AdminOnly() fiber.Handler {
 	return CheckRole(constant.UserRoleAdmin)
 }
+
+// StaffOrAdmin protects routes for staff or admin roles.
+func StaffOrAdmin() fiber.Handler {
+	return CheckRole(constant.UserRoleStaff, constant.UserRoleAdmin)
+}

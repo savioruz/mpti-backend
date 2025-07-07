@@ -26,8 +26,15 @@ const (
 	BookingCanceledBySystem = "system"
 )
 
+var PaymentUnknownMethod = "unknown"
+
 const (
 	PaymentCurrencyIDR = "IDR"
+
+	PaymentCashMethod = "cash"
+
+	PaymentStatusPaid    = "PAID"
+	PaymentStatusPending = "PENDING"
 )
 
 const (
@@ -46,6 +53,7 @@ const (
 
 const (
 	UserRoleAdmin = "9"
+	UserRoleStaff = "2"
 	UserRoleUser  = "1"
 )
 
