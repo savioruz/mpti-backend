@@ -110,6 +110,7 @@ func (p *PaginatedUserResponse) FromModel(users []repository.User, totalItems, l
 
 	if len(users) == 0 {
 		p.Users = []UserAdminResponse{}
+
 		return
 	}
 

@@ -108,6 +108,7 @@ func (s *userService) GetAllUsers(ctx context.Context, req dto.GetUsersRequest) 
 	})
 	if err != nil {
 		s.logger.Error("service - user - GetAllUsers - failed to count users: %v", err)
+
 		return res, failure.InternalError(err)
 	}
 
@@ -121,6 +122,7 @@ func (s *userService) GetAllUsers(ctx context.Context, req dto.GetUsersRequest) 
 	})
 	if err != nil {
 		s.logger.Error("service - user - GetAllUsers - failed to get users: %v", err)
+
 		return res, failure.InternalError(err)
 	}
 
@@ -134,13 +136,17 @@ func (s *userService) GetUserByID(ctx context.Context, userID string) (res dto.U
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			s.logger.Error("service - user - GetUserByID - user not found: %s", userID)
+
 			return res, failure.NotFound("user not found")
 		}
+
 		s.logger.Error("service - user - GetUserByID - failed to get user: %v", err)
+
 		return res, failure.InternalError(err)
 	}
 
 	res = dto.UserAdminResponse{}.FromModel(user)
+
 	return res, nil
 }
 
@@ -152,12 +158,16 @@ func (s *userService) UpdateUserRole(ctx context.Context, id string, req dto.Upd
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			s.logger.Error("service - user - UpdateUserRole - user not found: %s", id)
+
 			return res, failure.NotFound("user not found")
 		}
+
 		s.logger.Error("service - user - UpdateUserRole - failed to update user role: %v", err)
+
 		return res, failure.InternalError(err)
 	}
 
 	res = dto.UserAdminResponse{}.FromModel(user)
+
 	return res, nil
 }

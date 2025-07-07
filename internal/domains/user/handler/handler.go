@@ -106,12 +106,14 @@ func (h *Handler) GetAllUsers(ctx *fiber.Ctx) error {
 
 	if err := ctx.QueryParser(&req); err != nil {
 		h.logger.Error("http - user - GetAllUsers - query parser error: %v", err)
+
 		return response.WithError(ctx, err)
 	}
 
 	users, err := h.service.GetAllUsers(ctx.Context(), req)
 	if err != nil {
 		h.logger.Error("http - user - GetAllUsers - service error: %v", err)
+
 		return response.WithError(ctx, err)
 	}
 
@@ -137,12 +139,14 @@ func (h *Handler) GetUserByID(ctx *fiber.Ctx) error {
 
 	if userID == "" {
 		h.logger.Error("http - user - GetUserByID - user ID is required")
+
 		return response.WithError(ctx, failure.BadRequestFromString("user ID is required"))
 	}
 
 	user, err := h.service.GetUserByID(ctx.Context(), userID)
 	if err != nil {
 		h.logger.Error("http - user - GetUserByID - service error: %v", err)
+
 		return response.WithError(ctx, err)
 	}
 
@@ -169,12 +173,14 @@ func (h *Handler) UpdateUserRole(ctx *fiber.Ctx) error {
 
 	if userID == "" {
 		h.logger.Error("http - user - UpdateUserRole - user ID is required")
+
 		return response.WithError(ctx, failure.BadRequestFromString("user ID is required"))
 	}
 
 	var req dto.UpdateUserRoleRequest
 	if err := ctx.BodyParser(&req); err != nil {
 		h.logger.Error("http - user - UpdateUserRole - body parser error: %v", err)
+
 		return response.WithError(ctx, err)
 	}
 
@@ -182,12 +188,14 @@ func (h *Handler) UpdateUserRole(ctx *fiber.Ctx) error {
 		validationErr := err.Error()
 		transformErr := failure.BadRequestFromString(validationErr)
 		h.logger.Error("http - user - UpdateUserRole - validation error: %v", transformErr)
+
 		return response.WithError(ctx, transformErr)
 	}
 
 	user, err := h.service.UpdateUserRole(ctx.Context(), userID, req)
 	if err != nil {
 		h.logger.Error("http - user - UpdateUserRole - service error: %v", err)
+
 		return response.WithError(ctx, err)
 	}
 
