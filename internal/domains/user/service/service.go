@@ -2,13 +2,16 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/savioruz/goth/config"
 	"github.com/savioruz/goth/internal/domains/user/dto"
 	"github.com/savioruz/goth/internal/domains/user/repository"
 	"github.com/savioruz/goth/pkg/failure"
+	"github.com/savioruz/goth/pkg/helper"
 	"github.com/savioruz/goth/pkg/logger"
 	"github.com/savioruz/goth/pkg/postgres"
 	"github.com/savioruz/goth/pkg/redis"
@@ -16,6 +19,9 @@ import (
 
 type UserService interface {
 	Profile(ctx context.Context, email string) (res dto.UserProfileResponse, err error)
+	GetAllUsers(ctx context.Context, req dto.GetUsersRequest) (dto.PaginatedUserResponse, error)
+	GetUserByID(ctx context.Context, userID string) (dto.UserAdminResponse, error)
+	UpdateUserRole(ctx context.Context, id string, req dto.UpdateUserRoleRequest) (dto.UserAdminResponse, error)
 }
 
 const (
@@ -80,4 +86,88 @@ func (s *userService) Profile(ctx context.Context, email string) (res dto.UserPr
 	}()
 
 	return profileResponse, nil
+}
+
+func (s *userService) GetAllUsers(ctx context.Context, req dto.GetUsersRequest) (res dto.PaginatedUserResponse, err error) {
+	page := req.Page
+	if page <= 0 {
+		page = 1
+	}
+
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 10
+	}
+
+	offset := (page - 1) * limit
+
+	totalCount, err := s.repo.CountUsers(ctx, s.db, repository.CountUsersParams{
+		Column1: req.Email,
+		Column2: req.FullName,
+		Column3: req.Level,
+	})
+	if err != nil {
+		s.logger.Error("service - user - GetAllUsers - failed to count users: %v", err)
+
+		return res, failure.InternalError(err)
+	}
+
+	// Get paginated users
+	users, err := s.repo.GetAllUsers(ctx, s.db, repository.GetAllUsersParams{
+		Column1: req.Email,
+		Column2: req.FullName,
+		Column3: req.Level,
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		s.logger.Error("service - user - GetAllUsers - failed to get users: %v", err)
+
+		return res, failure.InternalError(err)
+	}
+
+	res.FromModel(users, int(totalCount), limit)
+
+	return res, nil
+}
+
+func (s *userService) GetUserByID(ctx context.Context, userID string) (res dto.UserAdminResponse, err error) {
+	user, err := s.repo.GetUserByID(ctx, s.db, helper.PgUUID(userID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.logger.Error("service - user - GetUserByID - user not found: %s", userID)
+
+			return res, failure.NotFound("user not found")
+		}
+
+		s.logger.Error("service - user - GetUserByID - failed to get user: %v", err)
+
+		return res, failure.InternalError(err)
+	}
+
+	res = dto.UserAdminResponse{}.FromModel(user)
+
+	return res, nil
+}
+
+func (s *userService) UpdateUserRole(ctx context.Context, id string, req dto.UpdateUserRoleRequest) (res dto.UserAdminResponse, err error) {
+	user, err := s.repo.UpdateUserRole(ctx, s.db, repository.UpdateUserRoleParams{
+		ID:    helper.PgUUID(id),
+		Level: req.Level,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.logger.Error("service - user - UpdateUserRole - user not found: %s", id)
+
+			return res, failure.NotFound("user not found")
+		}
+
+		s.logger.Error("service - user - UpdateUserRole - failed to update user role: %v", err)
+
+		return res, failure.InternalError(err)
+	}
+
+	res = dto.UserAdminResponse{}.FromModel(user)
+
+	return res, nil
 }

@@ -28,3 +28,26 @@ SELECT * FROM password_resets WHERE token = $1 AND expires_at > now() LIMIT 1;
 
 -- name: ResetPassword :one
 UPDATE users SET password = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING *;
+
+-- name: GetAllUsers :many
+SELECT * FROM users 
+WHERE deleted_at IS NULL
+  AND ($1::text = '' OR email ILIKE '%' || $1 || '%')
+  AND ($2::text = '' OR full_name ILIKE '%' || $2 || '%')
+  AND ($3::text = '' OR level = $3)
+ORDER BY created_at DESC
+LIMIT $4 OFFSET $5;
+
+-- name: CountUsers :one
+SELECT COUNT(*) FROM users
+WHERE deleted_at IS NULL
+  AND ($1::text = '' OR email ILIKE '%' || $1 || '%')
+  AND ($2::text = '' OR full_name ILIKE '%' || $2 || '%')
+  AND ($3::text = '' OR level = $3);
+
+-- name: GetUserByID :one
+SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1;
+
+-- name: UpdateUserRole :one
+UPDATE users SET level = $2, updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL RETURNING *;
