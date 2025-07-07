@@ -16,6 +16,7 @@ ORDER BY created_at DESC;
 -- name: UpdatePaymentStatus :exec
 UPDATE payments
 SET payment_status = $2,
-    paid_at = $3,
+    payment_method = $3,
+    paid_at = $4,
     updated_at = now()
 WHERE transaction_id = $1;

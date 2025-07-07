@@ -1,12 +1,14 @@
 package dto
 
-type CreatePaymentRequest struct {
+import "github.com/savioruz/goth/pkg/gdto"
+
+type CreatePaymentInvoice struct {
 	OrderID    string `json:"order_id" validate:"required,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
 	Amount     int64  `json:"amount" validate:"required,numeric,min=10000" example:"10000"`
 	PayerEmail string `json:"payer_email" validate:"required,email" example:"mail@example.com"`
 }
 
-type PaymentCallbackRequest struct {
+type CallbackPaymentInvoice struct {
 	ID                 string  `json:"id"`
 	ExternalID         string  `json:"external_id"`
 	UserID             string  `json:"user_id"`
@@ -27,4 +29,17 @@ type PaymentCallbackRequest struct {
 	PaymentDestination *string `json:"payment_destination,omitempty"`
 	SuccessRedirectURL *string `json:"success_redirect_url,omitempty"`
 	FailedRedirectURL  *string `json:"failed_redirect_url,omitempty"`
+}
+
+type CreatePaymentRequest struct {
+	BookingID     string `json:"booking_id" validate:"required,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
+	PaymentMethod string `json:"payment_method" validate:"required"`
+	Amount        int64  `json:"amount" validate:"required,numeric,min=10000" example:"10000"`
+	TransactionID string `json:"transaction_id" validate:"required"`
+}
+
+type GetPaymentsRequest struct {
+	gdto.PaginationRequest
+	PaymentMethod string `query:"payment_method" json:"payment_method"`
+	PaymentStatus string `query:"payment_status" json:"payment_status"`
 }

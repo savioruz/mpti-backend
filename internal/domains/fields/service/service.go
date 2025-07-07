@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/savioruz/goth/config"
 	"github.com/savioruz/goth/internal/domains/fields/dto"
 	"github.com/savioruz/goth/internal/domains/fields/repository"

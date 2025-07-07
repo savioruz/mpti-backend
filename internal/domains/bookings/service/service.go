@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"strconv"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/savioruz/goth/config"
 	"github.com/savioruz/goth/internal/domains/bookings/dto"
@@ -17,11 +19,10 @@ import (
 	"github.com/savioruz/goth/pkg/logger"
 	"github.com/savioruz/goth/pkg/postgres"
 	"github.com/savioruz/goth/pkg/redis"
-	"strconv"
 )
 
 type BookingService interface {
-	CreateBooking(ctx context.Context, req dto.CreateBookingRequest, userID, email string) (paymentDto.CreatePaymentResponse, error)
+	CreateBooking(ctx context.Context, req dto.CreateBookingRequest, userID, email string) (paymentDto.CreatePaymentInvoiceResponse, error)
 	GetBookingByID(ctx context.Context, id string) (dto.BookingResponse, error)
 	GetUserBookings(ctx context.Context, userID string, req gdto.PaginationRequest) (dto.GetBookingsResponse, error)
 	CountUserBookings(ctx context.Context, userID string, req gdto.PaginationRequest) (int, error)
@@ -59,7 +60,7 @@ const (
 	identifier = "service - booking - %s"
 )
 
-func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookingRequest, userID, email string) (res paymentDto.CreatePaymentResponse, err error) {
+func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookingRequest, userID, email string) (res paymentDto.CreatePaymentInvoiceResponse, err error) {
 	isValid, err := helper.IsBookingTimeValid(req.Date, req.StartTime)
 	if err != nil {
 		s.logger.Error(identifier, "error validating booking time: "+err.Error())
@@ -154,11 +155,41 @@ func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookin
 		return res, err
 	}
 
-	res, err = s.paymentService.CreateInvoice(ctx, paymentDto.CreatePaymentRequest{
-		OrderID:    booking.String(),
-		Amount:     totalPrice,
-		PayerEmail: email,
-	})
+	if req.Cash {
+		transactionID := "cash-" + booking.String()
+
+		id, err := s.paymentService.CreatePayments(ctx, paymentDto.CreatePaymentRequest{
+			BookingID:     booking.String(),
+			PaymentMethod: constant.PaymentCashMethod,
+			TransactionID: transactionID,
+			Amount:        totalPrice,
+		})
+		if err != nil {
+			s.logger.Error(identifier, "error creating cash payment: "+err.Error())
+
+			return res, err
+		}
+
+		res = paymentDto.CreatePaymentInvoiceResponse{
+			ID:         id,
+			OrderID:    booking.String(),
+			Amount:     totalPrice,
+			Status:     constant.PaymentStatusPaid,
+			ExpiryDate: nil,
+			PaymentURL: nil,
+		}
+	} else {
+		res, err = s.paymentService.CreateInvoice(ctx, paymentDto.CreatePaymentInvoice{
+			OrderID:    booking.String(),
+			Amount:     totalPrice,
+			PayerEmail: email,
+		})
+		if err != nil {
+			s.logger.Error(identifier, "error creating payment invoice: "+err.Error())
+
+			return res, err
+		}
+	}
 
 	go func() {
 		ctx := context.WithoutCancel(ctx)

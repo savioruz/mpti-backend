@@ -28,6 +28,11 @@ const (
 
 const (
 	PaymentCurrencyIDR = "IDR"
+
+	PaymentCashMethod = "cash"
+
+	PaymentStatusPaid    = "PAID"
+	PaymentStatusPending = "PENDING"
 )
 
 const (
