@@ -42,9 +42,10 @@ const (
 )
 
 const (
-	FullDateFormat = time.RFC3339
-	DateFormat     = "2006-01-02"
-	HoursFormat    = "15:04"
+	FullDateFormat  = time.RFC3339
+	DateFormat      = "2006-01-02"
+	HoursFormat     = "15:04"
+	TimestampFormat = "2006-01-02 15:04:05"
 
 	SecondsPerHour     = 3600
 	MinutesPerHour     = 60

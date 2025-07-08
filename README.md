@@ -43,13 +43,27 @@ cd goth
 cp .env.example .env
 ```
 
-3. Run the application:
+3. Configure timezone (important for consistent datetime handling):
+
+Edit your `.env` file and set the `APP_TIMEZONE` variable:
+
+```bash
+# Example for Indonesia (UTC+7)
+APP_TIMEZONE=Asia/Jakarta
+
+# Example for UTC (default)
+APP_TIMEZONE=UTC
+```
+
+**Note**: The application handles all datetime operations in the configured timezone, regardless of the database timezone setting. This ensures consistent behavior across different deployment environments.
+
+4. Run the application:
 
 ```bash
 docker compose up -d
 ```
 
-4. Run the migrations:
+5. Run the migrations:
 
 ```bash
 make migrate.up

@@ -62,12 +62,17 @@ func IsBookingTimeValid(bookingDate string, startTimeStr string) (bool, error) {
 		return false, err
 	}
 
+	timezone := time.UTC
+	if AppTimezone != nil {
+		timezone = AppTimezone
+	}
+
 	bookingDateTime := time.Date(
 		bookingDateObj.Year(), bookingDateObj.Month(), bookingDateObj.Day(),
-		startTime.Hour(), startTime.Minute(), 0, 0, time.Local,
+		startTime.Hour(), startTime.Minute(), 0, 0, timezone,
 	)
 
-	return bookingDateTime.After(time.Now()), nil
+	return bookingDateTime.After(NowInAppTimezone()), nil
 }
 
 func GenerateStateToken() string {
@@ -76,7 +81,7 @@ func GenerateStateToken() string {
 
 	_, err := rand.Read(b)
 	if err != nil {
-		return time.Now().String()
+		return NowInAppTimezone().String()
 	}
 
 	return base64.URLEncoding.EncodeToString(b)

@@ -24,8 +24,9 @@ type (
 	}
 
 	App struct {
-		Name    string `env:"APP_NAME,required"`
-		Version string `env:"APP_VERSION,required"`
+		Name     string `env:"APP_NAME,required"`
+		Version  string `env:"APP_VERSION,required"`
+		Timezone string `env:"APP_TIMEZONE" envDefault:"UTC+7"`
 	}
 
 	CORS struct {

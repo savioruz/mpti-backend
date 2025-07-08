@@ -8,11 +8,17 @@ import (
 	"syscall"
 
 	"github.com/savioruz/goth/config"
+	"github.com/savioruz/goth/pkg/helper"
 )
 
 //go:generate go run github.com/google/wire/cmd/wire
 
 func Run(cfg *config.Config) {
+	// Initialize timezone
+	if err := helper.InitTimezone(cfg.App.Timezone); err != nil {
+		panic(fmt.Sprintf("failed to initialize timezone: %v", err))
+	}
+
 	app, err := InitializeApp(cfg)
 	if err != nil {
 		panic(fmt.Sprintf("failed to initialize application: %v", err))
