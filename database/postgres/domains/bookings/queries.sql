@@ -59,3 +59,15 @@ UPDATE bookings
 SET status = $2,
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL;
+
+-- name: GetAllBookings :many
+SELECT * FROM bookings
+WHERE deleted_at IS NULL
+  AND ($1::text = '' OR status ILIKE '%' || $1 || '%')
+ORDER BY booking_date DESC, start_time DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountAllBookings :one
+SELECT COUNT(*) FROM bookings
+WHERE deleted_at IS NULL
+  AND ($1::text = '' OR status ILIKE '%' || $1 || '%');

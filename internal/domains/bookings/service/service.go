@@ -26,6 +26,8 @@ type BookingService interface {
 	GetBookingByID(ctx context.Context, id string) (dto.BookingResponse, error)
 	GetUserBookings(ctx context.Context, userID string, req gdto.PaginationRequest) (dto.GetBookingsResponse, error)
 	CountUserBookings(ctx context.Context, userID string, req gdto.PaginationRequest) (int, error)
+	GetAllBookings(ctx context.Context, req gdto.PaginationRequest) (dto.GetBookingsResponse, error)
+	CountAllBookings(ctx context.Context, req gdto.PaginationRequest) (int, error)
 	GetBookedSlots(ctx context.Context, req dto.GetBookedSlotsRequest) (dto.GetBookedSlotsResponse, error)
 	CancelUserBooking(ctx context.Context, req dto.CancelUserBookingRequest) error
 }
@@ -331,6 +333,91 @@ func (s *bookingService) CountUserBookings(ctx context.Context, userID string, r
 	go func() {
 		if err := s.cache.Save(context.WithoutCancel(ctx), cacheKey, total, s.cfg.Cache.Duration); err != nil {
 			s.logger.Error(identifier, "count - error saving user bookings count to cache: %s", err.Error())
+		}
+	}()
+
+	return total, nil
+}
+
+func (s *bookingService) GetAllBookings(ctx context.Context, req gdto.PaginationRequest) (res dto.GetBookingsResponse, err error) {
+	page, limit := helper.DefaultPagination(req.Page, req.Limit)
+
+	keyArgs := map[string]string{}
+	keyArgs["page"] = strconv.Itoa(page)
+	keyArgs["limit"] = strconv.Itoa(limit)
+	keyArgs["filter"] = req.Filter
+	cacheKey := helper.BuildCacheKey(cacheGetBookingsKey, "all:"+helper.GenerateUniqueKey(keyArgs))
+
+	var cacheRes dto.GetBookingsResponse
+
+	err = s.cache.Get(ctx, cacheKey, &cacheRes)
+	if err == nil {
+		s.logger.Info(identifier, "get all bookings - cache hit for key: %s", cacheKey)
+
+		return cacheRes, nil
+	}
+
+	totalItems, err := s.CountAllBookings(ctx, req)
+	if err != nil {
+		s.logger.Error(identifier, "get all bookings - error counting all bookings: %w", err)
+
+		return res, err
+	}
+
+	offset := helper.CalculateOffset(page, limit)
+
+	bookings, err := s.repo.GetAllBookings(ctx, s.db, repository.GetAllBookingsParams{
+		Column1: req.Filter,
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		s.logger.Error(identifier, "get all bookings - error getting all bookings: %w", err)
+
+		return res, err
+	}
+
+	res.FromModel(bookings, totalItems, limit)
+
+	go func() {
+		if err := s.cache.Save(context.WithoutCancel(ctx), cacheKey, res, s.cfg.Cache.Duration); err != nil {
+			s.logger.Error(identifier, "get all bookings - failed to save all bookings to cache: %w", err)
+		}
+	}()
+
+	return res, nil
+}
+
+func (s *bookingService) CountAllBookings(ctx context.Context, req gdto.PaginationRequest) (total int, err error) {
+	page, limit := helper.DefaultPagination(req.Page, req.Limit)
+
+	keyArgs := map[string]string{}
+	keyArgs["page"] = strconv.Itoa(page)
+	keyArgs["limit"] = strconv.Itoa(limit)
+	keyArgs["filter"] = req.Filter
+	cacheKey := helper.BuildCacheKey(cacheCountBookingsKey, "all:"+helper.GenerateUniqueKey(keyArgs))
+
+	var cacheRes int
+
+	err = s.cache.Get(ctx, cacheKey, &cacheRes)
+	if err == nil {
+		s.logger.Info(identifier, "count all bookings - cache hit for key: %s", cacheKey)
+
+		return cacheRes, nil
+	}
+
+	totalItems, err := s.repo.CountAllBookings(ctx, s.db, req.Filter)
+	if err != nil {
+		s.logger.Error(identifier, "count all bookings - error counting all bookings: %s", err.Error())
+
+		return total, err
+	}
+
+	total = int(totalItems)
+
+	go func() {
+		if err := s.cache.Save(context.WithoutCancel(ctx), cacheKey, total, s.cfg.Cache.Duration); err != nil {
+			s.logger.Error(identifier, "count all bookings - error saving all bookings count to cache: %s", err.Error())
 		}
 	}()
 

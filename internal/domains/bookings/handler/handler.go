@@ -44,6 +44,7 @@ func (h *Handler) RegisterRoutes(r fiber.Router) {
 	bookings.Put("/:id/cancel", middleware.Jwt(), h.CancelUserBooking)
 
 	r.Get("/users/bookings", middleware.Jwt(), h.GetUserBookings)
+	r.Get("/", middleware.Jwt(), middleware.StaffOrAdmin(), h.GetAllBookings)
 }
 
 // CreateBooking godoc
@@ -292,4 +293,37 @@ func (h *Handler) CancelUserBooking(ctx *fiber.Ctx) error {
 	res := fmt.Sprintf("Booking %s cancelled", id)
 
 	return response.WithMessage(ctx, fiber.StatusOK, res)
+}
+
+// GetAllBookings godoc
+// @Summary Get all bookings (Admin/Staff only)
+// @Description Get all bookings with pagination for admin and staff users
+// @Tags bookings
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Param filter query string false "Status filter"
+// @Success 200 {object} response.Data[dto.GetBookingsResponse]
+// @Failure 401 {object} response.Error
+// @Failure 403 {object} response.Error
+// @Failure 500 {object} response.Error
+// @Router /bookings [get]
+// @Security BearerAuth
+func (h *Handler) GetAllBookings(ctx *fiber.Ctx) error {
+	var req gdto.PaginationRequest
+	if err := ctx.QueryParser(&req); err != nil {
+		h.logger.Error(identifier, "error parsing query params: "+err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	res, err := h.service.GetAllBookings(ctx.Context(), req)
+	if err != nil {
+		h.logger.Error(identifier, "get all bookings - error: %w", err)
+
+		return response.WithError(ctx, err)
+	}
+
+	return response.WithJSON(ctx, fiber.StatusOK, res)
 }
