@@ -146,9 +146,19 @@ var (
 
 // InitTimezone initializes the application timezone
 func InitTimezone(timezone string) error {
+	if timezone == "" {
+		timezone = "UTC"
+	}
+
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
-		return err
+		// Fallback to UTC if the requested timezone is not available
+		loc, err = time.LoadLocation("UTC")
+		if err != nil {
+			AppTimezone = time.UTC
+
+			return nil
+		}
 	}
 
 	AppTimezone = loc

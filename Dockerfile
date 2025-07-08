@@ -12,7 +12,7 @@ FROM golang:1.24.2-alpine3.21 AS builder
 
 ARG TARGETARCH
 
-RUN apk add --no-cache ca-certificates make
+RUN apk add --no-cache ca-certificates make tzdata
 
 COPY --from=modules /go/pkg /go/pkg
 COPY . /app
@@ -28,5 +28,6 @@ FROM scratch
 COPY --from=builder /app/config /config
 COPY --from=builder /bin/app /app
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 CMD ["/app"]
