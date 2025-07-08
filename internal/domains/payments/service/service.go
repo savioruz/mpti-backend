@@ -175,8 +175,8 @@ func (s *paymentService) Callbacks(ctx context.Context, req dto.CallbackPaymentI
 		paymentMethod = &constant.PaymentUnknownMethod
 	}
 
-	if err := s.repo.UpdatePaymentStatus(ctx, tx, repository.UpdatePaymentStatusParams{
-		TransactionID: req.ExternalID,
+	if err := s.repo.UpdatePaymentStatusByBookingID(ctx, tx, repository.UpdatePaymentStatusByBookingIDParams{
+		BookingID:     helper.PgUUID(req.ExternalID),
 		PaymentStatus: paymentStatus,
 		PaymentMethod: *paymentMethod,
 		PaidAt:        helper.PgTimestamp(time.Now()),
@@ -184,7 +184,7 @@ func (s *paymentService) Callbacks(ctx context.Context, req dto.CallbackPaymentI
 		s.logger.Error(identifier, " - Callbacks - failed to update payment status: %v", err)
 
 		if errors.Is(err, pgx.ErrNoRows) {
-			return failure.NotFound("payment not found for transaction ID: " + req.ExternalID)
+			return failure.NotFound("payment not found for booking ID: " + req.ExternalID)
 		}
 
 		return failure.InternalError(err)
@@ -209,7 +209,7 @@ func (s *paymentService) Callbacks(ctx context.Context, req dto.CallbackPaymentI
 		return failure.InternalError(err)
 	}
 
-	s.logger.Info(identifier, " - Callbacks - payment status updated successfully for transaction ID: %s", req.ExternalID)
+	s.logger.Info(identifier, " - Callbacks - payment status updated successfully for booking ID: %s", req.ExternalID)
 
 	return nil
 }

@@ -26,3 +26,11 @@ SET payment_status = $2,
     paid_at = $4,
     updated_at = now()
 WHERE transaction_id = $1;
+
+-- name: UpdatePaymentStatusByBookingID :exec
+UPDATE payments
+SET payment_status = $2,
+    payment_method = $3,
+    paid_at = $4,
+    updated_at = now()
+WHERE booking_id = $1;
