@@ -20,8 +20,8 @@ func CalculateTotalPages(totalItems, limit int) int {
 	return (totalItems + limit - 1) / limit
 }
 
-func CalculateEndTime(startTime time.Time, durationMinutes int) time.Time {
-	return startTime.Add(time.Duration(durationMinutes) * time.Minute)
+func CalculateEndTime(startTime time.Time, durationHours int) time.Time {
+	return startTime.Add(time.Duration(durationHours) * time.Hour)
 }
 
 func CalculateTotalPrice(pricePerHour int64, durationHours int) int64 {
