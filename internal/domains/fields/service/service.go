@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/savioruz/goth/config"
@@ -344,7 +345,7 @@ func (s *fieldService) Update(ctx context.Context, id string, req dto.FieldUpdat
 
 		switch fieldName {
 		case "location_id":
-			existingField.LocationID = helper.PgUUID(field.Interface().(string))
+			existingField.LocationID = helper.PgUUID(field.Interface().(uuid.UUID).String())
 		case "name":
 			existingField.Name = field.Interface().(string)
 		case "type":
