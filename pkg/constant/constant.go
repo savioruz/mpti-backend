@@ -31,7 +31,7 @@ var PaymentUnknownMethod = "unknown"
 const (
 	PaymentCurrencyIDR = "IDR"
 
-	PaymentCashMethod = "cash"
+	PaymentCashMethod = "CASH"
 
 	PaymentStatusPaid    = "PAID"
 	PaymentStatusPending = "PENDING"
