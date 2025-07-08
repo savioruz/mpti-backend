@@ -302,6 +302,7 @@ func (s *bookingService) GetUserBookings(ctx context.Context, userID string, req
 
 	// Collect all field IDs
 	fieldIDs := make(map[string]struct{})
+
 	for _, booking := range bookings {
 		fieldID := booking.FieldID.String()
 		fieldIDs[fieldID] = struct{}{}
@@ -309,6 +310,7 @@ func (s *bookingService) GetUserBookings(ctx context.Context, userID string, req
 
 	// Get field names for all field IDs
 	fieldNames := make(map[string]string)
+
 	for fieldID := range fieldIDs {
 		field, err := s.fieldRepo.GetFieldById(ctx, s.db, helper.PgUUID(fieldID))
 		if err == nil {
@@ -412,6 +414,7 @@ func (s *bookingService) GetAllBookings(ctx context.Context, req gdto.Pagination
 
 	// Collect all field IDs
 	fieldIDs := make(map[string]struct{})
+
 	for _, booking := range bookings {
 		fieldID := booking.FieldID.String()
 		fieldIDs[fieldID] = struct{}{}
@@ -419,6 +422,7 @@ func (s *bookingService) GetAllBookings(ctx context.Context, req gdto.Pagination
 
 	// Get field names for all field IDs
 	fieldNames := make(map[string]string)
+
 	for fieldID := range fieldIDs {
 		field, err := s.fieldRepo.GetFieldById(ctx, s.db, helper.PgUUID(fieldID))
 		if err == nil {
