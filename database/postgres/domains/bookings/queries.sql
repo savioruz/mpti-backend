@@ -10,13 +10,13 @@ SELECT * FROM bookings WHERE id = $1 AND deleted_at IS NULL LIMIT 1;
 SELECT COUNT(*) FROM bookings
 WHERE field_id = $1
   AND booking_date = $2
-  AND status IN ('pending', 'confirmed')
+  AND status IN ('PENDING', 'CONFIRMED')
   AND (start_time, end_time) OVERLAPS ($3::time, $4::time)
   AND deleted_at IS NULL;
 
 -- name: CancelBooking :exec
 UPDATE bookings
-SET status = 'canceled',
+SET status = 'CANCELLED',
     canceled_at = now(),
     canceled_by = $3,
     updated_at = now()
@@ -25,9 +25,9 @@ RETURNING id;
 
 -- name: ExpireOldBookings :exec
 UPDATE bookings
-SET status = 'expired',
+SET status = 'EXPIRED',
     updated_at = now()
-WHERE status = 'pending'
+WHERE status = 'PENDING'
   AND expires_at < now()
   AND deleted_at IS NULL
 RETURNING id;
@@ -51,7 +51,7 @@ SELECT start_time, end_time
 FROM bookings
 WHERE field_id = $1
   AND booking_date = $2
-  AND status IN ('pending', 'confirmed')
+  AND status IN ('PENDING', 'CONFIRMED')
 ORDER BY start_time;
 
 -- name: UpdateBookingStatus :exec
