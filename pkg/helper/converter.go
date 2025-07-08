@@ -157,10 +157,13 @@ func InitTimezone(timezone string) error {
 		if err != nil {
 			// If even UTC fails, use time.UTC
 			AppTimezone = time.UTC
+
 			return nil
 		}
 	}
+
 	AppTimezone = loc
+
 	return nil
 }
 
