@@ -1,6 +1,6 @@
 -- name: InsertBooking :one
-INSERT INTO bookings (user_id, field_id, booking_date, start_time, end_time, total_price)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO bookings (user_id, field_id, booking_date, start_time, end_time, total_price, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id;
 
 -- name: GetBookingById :one

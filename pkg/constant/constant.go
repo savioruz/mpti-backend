@@ -16,10 +16,10 @@ const (
 )
 
 const (
-	BookingStatusPending   = "PENDING"
-	BookingStatusCanceled  = "CANCELLED"
-	BookingStatusExpired   = "EXPIRED"
-	BookingStatusConfirmed = "CONFIRMED"
+	BookingStatusPending  = "PENDING"
+	BookingStatusCanceled = "CANCELLED"
+	BookingStatusExpired  = "EXPIRED"
+	BookingStatusPaid     = "PAID"
 
 	BookingCanceledByUser   = "user"
 	BookingCanceledByAdmin  = "admin"

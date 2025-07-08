@@ -134,6 +134,13 @@ func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookin
 		return res, err
 	}
 
+	var status string
+	if *req.Cash {
+		status = constant.BookingStatusPaid
+	} else {
+		status = constant.BookingStatusPending
+	}
+
 	totalPrice := helper.CalculateTotalPrice(helper.Int64FromPg(field.Price), req.Duration)
 
 	booking, err := s.repo.InsertBooking(ctx, tx, repository.InsertBookingParams{
@@ -143,9 +150,9 @@ func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookin
 		StartTime:   startTime,
 		EndTime:     endTime,
 		TotalPrice:  helper.PgInt64(totalPrice),
+		Status:      status,
 	})
 	if err != nil {
-		s.logger.Debug(startTime, endTime)
 		s.logger.Error(identifier, "error inserting booking: "+err.Error())
 
 		return res, err
