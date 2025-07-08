@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
@@ -179,7 +178,7 @@ func (s *paymentService) Callbacks(ctx context.Context, req dto.CallbackPaymentI
 		BookingID:     helper.PgUUID(req.ExternalID),
 		PaymentStatus: paymentStatus,
 		PaymentMethod: *paymentMethod,
-		PaidAt:        helper.PgTimestamp(time.Now()),
+		PaidAt:        helper.PgTimestampNow(),
 	}); err != nil {
 		s.logger.Error(identifier, " - Callbacks - failed to update payment status: %v", err)
 

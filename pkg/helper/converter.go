@@ -1,10 +1,11 @@
 package helper
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/savioruz/goth/pkg/constant"
 	"math/big"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/savioruz/goth/pkg/constant"
 )
 
 const (
@@ -136,4 +137,65 @@ func PgTimestamp(t time.Time) pgtype.Timestamp {
 		InfinityModifier: 0,
 		Valid:            true,
 	}
+}
+
+var (
+	// AppTimezone holds the application's timezone
+	AppTimezone *time.Location
+)
+
+// InitTimezone initializes the application timezone
+func InitTimezone(timezone string) error {
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return err
+	}
+
+	AppTimezone = loc
+
+	return nil
+}
+
+// NowInAppTimezone returns the current time in the application's timezone
+func NowInAppTimezone() time.Time {
+	if AppTimezone == nil {
+		return time.Now().UTC()
+	}
+
+	return time.Now().In(AppTimezone)
+}
+
+// ToAppTimezone converts a time to the application's timezone
+func ToAppTimezone(t time.Time) time.Time {
+	if AppTimezone == nil {
+		return t.UTC()
+	}
+
+	return t.In(AppTimezone)
+}
+
+// PgTimestampNow returns current timestamp in app timezone as pgtype.Timestamp
+func PgTimestampNow() pgtype.Timestamp {
+	return PgTimestamp(NowInAppTimezone())
+}
+
+// FormatDateInAppTimezone formats a time in the application timezone using the given format
+func FormatDateInAppTimezone(t time.Time, format string) string {
+	return ToAppTimezone(t).Format(format)
+}
+
+// ParseDateInAppTimezone parses a date string and returns it in the application timezone
+func ParseDateInAppTimezone(layout, value string) (time.Time, error) {
+	t, err := time.Parse(layout, value)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	// If the parsed time has no timezone info, assume it's in app timezone
+	if t.Location() == time.UTC && AppTimezone != nil {
+		// Re-interpret the time as being in app timezone
+		t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), AppTimezone)
+	}
+
+	return ToAppTimezone(t), nil
 }

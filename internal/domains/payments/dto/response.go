@@ -30,7 +30,7 @@ func (p PaymentResponse) FromModel(model repository.Payment) PaymentResponse {
 	var paidAt *string
 
 	if model.PaidAt.Valid {
-		formattedTime := model.PaidAt.Time.Format(constant.FullDateFormat)
+		formattedTime := helper.FormatDateInAppTimezone(model.PaidAt.Time, constant.FullDateFormat)
 		paidAt = &formattedTime
 	}
 
@@ -41,8 +41,8 @@ func (p PaymentResponse) FromModel(model repository.Payment) PaymentResponse {
 		PaymentStatus: model.PaymentStatus,
 		TransactionID: model.TransactionID,
 		PaidAt:        paidAt,
-		CreatedAt:     model.CreatedAt.Time.Format(constant.FullDateFormat),
-		UpdatedAt:     model.UpdatedAt.Time.Format(constant.FullDateFormat),
+		CreatedAt:     helper.FormatDateInAppTimezone(model.CreatedAt.Time, constant.FullDateFormat),
+		UpdatedAt:     helper.FormatDateInAppTimezone(model.UpdatedAt.Time, constant.FullDateFormat),
 	}
 }
 
