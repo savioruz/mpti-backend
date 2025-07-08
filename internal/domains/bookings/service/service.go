@@ -239,6 +239,14 @@ func (s *bookingService) GetBookingByID(ctx context.Context, id string) (res dto
 
 	res = res.FromModel(booking)
 
+	// Get field name
+	field, err := s.fieldRepo.GetFieldById(ctx, s.db, booking.FieldID)
+	if err == nil {
+		res.FieldName = field.Name
+	} else {
+		s.logger.Error(identifier, "error getting field name for ID %s: %w", booking.FieldID.String(), err)
+	}
+
 	go func() {
 		if err := s.cache.Save(context.WithoutCancel(ctx), cacheKey, res, s.cfg.Cache.Duration); err != nil {
 			s.logger.Error(identifier, "error saving booking to cache: "+err.Error())
@@ -289,7 +297,29 @@ func (s *bookingService) GetUserBookings(ctx context.Context, userID string, req
 		return res, err
 	}
 
+	// Create the basic response from bookings
 	res.FromModel(bookings, totalItems, limit)
+
+	// Collect all field IDs
+	fieldIDs := make(map[string]struct{})
+	for _, booking := range bookings {
+		fieldID := booking.FieldID.String()
+		fieldIDs[fieldID] = struct{}{}
+	}
+
+	// Get field names for all field IDs
+	fieldNames := make(map[string]string)
+	for fieldID := range fieldIDs {
+		field, err := s.fieldRepo.GetFieldById(ctx, s.db, helper.PgUUID(fieldID))
+		if err == nil {
+			fieldNames[fieldID] = field.Name
+		} else {
+			s.logger.Error(identifier, "get user bookings - error getting field name for ID %s: %w", fieldID, err)
+		}
+	}
+
+	// Enrich the response with field names
+	res.EnrichWithFieldNames(fieldNames)
 
 	go func() {
 		if err := s.cache.Save(context.WithoutCancel(ctx), cacheKey, res, s.cfg.Cache.Duration); err != nil {
@@ -377,7 +407,29 @@ func (s *bookingService) GetAllBookings(ctx context.Context, req gdto.Pagination
 		return res, err
 	}
 
+	// Create the basic response from bookings
 	res.FromModel(bookings, totalItems, limit)
+
+	// Collect all field IDs
+	fieldIDs := make(map[string]struct{})
+	for _, booking := range bookings {
+		fieldID := booking.FieldID.String()
+		fieldIDs[fieldID] = struct{}{}
+	}
+
+	// Get field names for all field IDs
+	fieldNames := make(map[string]string)
+	for fieldID := range fieldIDs {
+		field, err := s.fieldRepo.GetFieldById(ctx, s.db, helper.PgUUID(fieldID))
+		if err == nil {
+			fieldNames[fieldID] = field.Name
+		} else {
+			s.logger.Error(identifier, "get all bookings - error getting field name for ID %s: %w", fieldID, err)
+		}
+	}
+
+	// Enrich the response with field names
+	res.EnrichWithFieldNames(fieldNames)
 
 	go func() {
 		if err := s.cache.Save(context.WithoutCancel(ctx), cacheKey, res, s.cfg.Cache.Duration); err != nil {

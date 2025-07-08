@@ -71,3 +71,9 @@ LIMIT $2 OFFSET $3;
 SELECT COUNT(*) FROM bookings
 WHERE deleted_at IS NULL
   AND ($1::text = '' OR status ILIKE '%' || $1 || '%');
+
+-- name: GetBookingFieldIDs :many
+SELECT DISTINCT field_id FROM bookings
+WHERE deleted_at IS NULL
+  AND ($1::text = '' OR status ILIKE '%' || $1 || '%')
+ORDER BY field_id;

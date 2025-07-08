@@ -9,6 +9,7 @@ import (
 type BookingResponse struct {
 	ID          string `json:"id"`
 	FieldID     string `json:"field_id"`
+	FieldName   string `json:"field_name,omitempty"`
 	BookingDate string `json:"booking_date"`
 	StartTime   string `json:"start_time"`
 	EndTime     string `json:"end_time"`
@@ -55,6 +56,15 @@ func (b *GetBookingsResponse) FromModel(bookings []repository.Booking, totalItem
 
 	for i, booking := range bookings {
 		b.Bookings[i] = BookingResponse{}.FromModel(booking)
+	}
+}
+
+// EnrichWithFieldNames adds field names to the booking responses
+func (b *GetBookingsResponse) EnrichWithFieldNames(fieldNames map[string]string) {
+	for i := range b.Bookings {
+		if name, exists := fieldNames[b.Bookings[i].FieldID]; exists {
+			b.Bookings[i].FieldName = name
+		}
 	}
 }
 
