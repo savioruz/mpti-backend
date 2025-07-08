@@ -42,9 +42,9 @@ func (h *Handler) RegisterRoutes(r fiber.Router) {
 	bookings.Get("/:id", h.GetBookingByID)
 	bookings.Post("/slots", h.GetBookedSlots)
 	bookings.Put("/:id/cancel", middleware.Jwt(), h.CancelUserBooking)
+	bookings.Get("/", middleware.Jwt(), middleware.StaffOrAdmin(), h.GetAllBookings)
 
 	r.Get("/users/bookings", middleware.Jwt(), h.GetUserBookings)
-	r.Get("/", middleware.Jwt(), middleware.StaffOrAdmin(), h.GetAllBookings)
 }
 
 // CreateBooking godoc
