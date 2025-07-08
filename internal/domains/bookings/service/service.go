@@ -155,7 +155,7 @@ func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookin
 		return res, err
 	}
 
-	if req.Cash {
+	if *req.Cash {
 		// Check if user has permission to create cash payments (staff or admin only)
 		if userRole != constant.UserRoleAdmin && userRole != constant.UserRoleStaff {
 			s.logger.Error(identifier, "unauthorized cash payment attempt by user role: %s", userRole)

@@ -9,7 +9,7 @@ type CreateBookingRequest struct {
 	Date      string    `json:"date" validate:"required,datetime=2006-01-02" example:"2006-01-02"`
 	StartTime string    `json:"start_time" validate:"required,datetime=15:04" example:"15:04"`
 	Duration  int       `json:"duration" validate:"required"`
-	Cash      bool      `json:"cash" validate:"required"`
+	Cash      *bool     `json:"cash" validate:"required"`
 }
 
 type GetBookedSlotsRequest struct {
