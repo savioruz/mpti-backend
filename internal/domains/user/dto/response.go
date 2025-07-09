@@ -39,6 +39,23 @@ type UserAdminResponse struct {
 	UpdatedAt    string `json:"updated_at"`
 }
 
+type EmailVerificationResponse struct {
+	Message string `json:"message"`
+}
+
+type ForgotPasswordResponse struct {
+	Message string `json:"message"`
+}
+
+type ResetPasswordResponse struct {
+	Message string `json:"message"`
+}
+
+type ValidateResetTokenResponse struct {
+	Valid   bool   `json:"valid"`
+	Message string `json:"message"`
+}
+
 func (u *UserRegisterResponse) ToRegisterResponse(user repository.User) *UserRegisterResponse {
 	return &UserRegisterResponse{
 		ID:    user.ID.String(),

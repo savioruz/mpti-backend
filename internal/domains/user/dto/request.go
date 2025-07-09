@@ -23,3 +23,20 @@ type GetUsersRequest struct {
 type UpdateUserRoleRequest struct {
 	Level string `json:"level" validate:"required,oneof=1 2 9"`
 }
+
+type EmailVerificationRequest struct {
+	Token string `query:"token" validate:"required"`
+}
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type ResetPasswordRequest struct {
+	Token    string `json:"token" validate:"required"`
+	Password string `json:"password" validate:"required,min=8"`
+}
+
+type ValidateResetTokenRequest struct {
+	Token string `query:"token" validate:"required"`
+}

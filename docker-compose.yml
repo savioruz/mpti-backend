@@ -54,12 +54,22 @@ x-backend-app-environment: &x-backend-app-environment
   # Xendit
   XENDIT_API_KEY: ${XENDIT_API_KEY:-}
   XENDIT_CALLBACK_TOKEN: ${XENDIT_CALLBACK_TOKEN:-}
+  XENDIT_SUCCESS_URL: ${XENDIT_SUCCESS_URL:-http://localhost:5173/checkout/success}
+  XENDIT_FAILURE_URL: ${XENDIT_FAILURE_URL:-http://localhost:5173/checkout/failure}
   # Supabase
   SUPABASE_AWS_ACCESS_KEY_ID: ${SUPABASE_AWS_ACCESS_KEY_ID:-your_access_key_id}
   SUPABASE_AWS_SECRET_ACCESS_KEY: ${SUPABASE_AWS_SECRET_ACCESS_KEY:-your_secret_access_key}
   SUPABASE_ENDPOINT_URL: ${SUPABASE_ENDPOINT_URL:-https://project_ref.supabase.co/storage/v1/s3}
   SUPABASE_REGION: ${SUPABASE_REGION:-project_region}
   SUPABASE_BUCKET_NAME: ${SUPABASE_BUCKET_NAME:-field-images}
+  # Email Configuration
+  MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:-smtp.gmail.com}
+  MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
+  MAIL_SMTP_USERNAME: ${MAIL_SMTP_USERNAME:-your-email@gmail.com}
+  MAIL_SMTP_PASSWORD: ${MAIL_SMTP_PASSWORD:-your-app-password}
+  MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL:-your-email@gmail.com}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Your App Name}
+  APP_URL: ${APP_URL:-http://localhost:3000}
 
 services:
   db:

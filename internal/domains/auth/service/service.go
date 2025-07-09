@@ -3,9 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+
 	"github.com/savioruz/goth/pkg/constant"
 	"github.com/savioruz/goth/pkg/failure"
+	"github.com/savioruz/goth/pkg/helper"
 	"github.com/savioruz/goth/pkg/logger"
+	"github.com/savioruz/goth/pkg/mail"
 	"github.com/savioruz/goth/pkg/postgres"
 
 	"github.com/jackc/pgx/v5"
@@ -19,21 +22,31 @@ import (
 type AuthService interface {
 	Register(ctx context.Context, req dto.UserRegisterRequest) (res *dto.UserRegisterResponse, err error)
 	Login(ctx context.Context, req dto.UserLoginRequest) (*dto.UserLoginResponse, error)
+	VerifyEmail(ctx context.Context, req dto.EmailVerificationRequest) (*dto.EmailVerificationResponse, error)
+	ForgotPassword(ctx context.Context, req dto.ForgotPasswordRequest) (*dto.ForgotPasswordResponse, error)
+	ValidateResetToken(ctx context.Context, req dto.ValidateResetTokenRequest) (*dto.ValidateResetTokenResponse, error)
+	ResetPassword(ctx context.Context, req dto.ResetPasswordRequest) (*dto.ResetPasswordResponse, error)
 }
 
 type authService struct {
-	db     postgres.PgxIface
-	repo   repository.Querier
-	logger logger.Interface
+	db          postgres.PgxIface
+	repo        repository.Querier
+	logger      logger.Interface
+	mailService mail.Service
 }
 
-func New(db postgres.PgxIface, r repository.Querier, l logger.Interface) AuthService {
+func New(db postgres.PgxIface, r repository.Querier, l logger.Interface, m mail.Service) AuthService {
 	return &authService{
-		db:     db,
-		repo:   r,
-		logger: l,
+		db:          db,
+		repo:        r,
+		logger:      l,
+		mailService: m,
 	}
 }
+
+const (
+	tokenLength = 32
+)
 
 func (s *authService) Register(ctx context.Context, req dto.UserRegisterRequest) (res *dto.UserRegisterResponse, err error) {
 	tx, err := s.db.Begin(ctx)
@@ -91,11 +104,37 @@ func (s *authService) Register(ctx context.Context, req dto.UserRegisterRequest)
 		return nil, failure.InternalError(err)
 	}
 
+	// Generate verification token
+	token, err := helper.GenerateRandomToken(tokenLength)
+	if err != nil {
+		s.logger.Error("register - service - failed to generate verification token: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	// Create email verification record
+	_, err = s.repo.CreateEmailVerification(ctx, tx, repository.CreateEmailVerificationParams{
+		UserID: newUser.ID,
+		Token:  token,
+	})
+	if err != nil {
+		s.logger.Error("register - service - failed to create email verification: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
 	if err = tx.Commit(ctx); err != nil {
 		s.logger.Error("register - service - failed to commit transaction: %w", err)
 
 		return nil, failure.InternalError(err)
 	}
+
+	// Send verification email
+	go func() {
+		if err := s.mailService.SendVerificationEmail(newUser.Email, newUser.FullName.String, token); err != nil {
+			s.logger.Error("register - service - failed to send verification email: %w", err)
+		}
+	}()
 
 	res = new(dto.UserRegisterResponse).ToRegisterResponse(newUser)
 
@@ -167,5 +206,213 @@ func (s *authService) Login(ctx context.Context, req dto.UserLoginRequest) (*dto
 	return &dto.UserLoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (s *authService) VerifyEmail(ctx context.Context, req dto.EmailVerificationRequest) (*dto.EmailVerificationResponse, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		s.logger.Error("verify-email - service - failed to begin transaction: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+	defer func(tx pgx.Tx, ctx context.Context) {
+		err := tx.Rollback(ctx)
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			s.logger.Error("verify-email - service - failed to rollback transaction: %w", err)
+		}
+	}(tx, ctx)
+
+	verification, err := s.repo.GetEmailVerificationByToken(ctx, tx, req.Token)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.logger.Error("verify-email - service - invalid or expired token")
+
+			return nil, failure.BadRequestFromString("invalid or expired verification token")
+		}
+
+		s.logger.Error("verify-email - service - failed to get verification token: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	_, err = s.repo.VerifyEmail(ctx, tx, verification.UserID)
+	if err != nil {
+		s.logger.Error("verify-email - service - failed to verify email: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		s.logger.Error("verify-email - service - failed to commit transaction: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	return &dto.EmailVerificationResponse{
+		Message: "Email verified successfully",
+	}, nil
+}
+
+func (s *authService) ForgotPassword(ctx context.Context, req dto.ForgotPasswordRequest) (*dto.ForgotPasswordResponse, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		s.logger.Error("forgot-password - service - failed to begin transaction: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+	defer func(tx pgx.Tx, ctx context.Context) {
+		err := tx.Rollback(ctx)
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			s.logger.Error("forgot-password - service - failed to rollback transaction: %w", err)
+		}
+	}(tx, ctx)
+
+	user, err := s.repo.GetUserByEmail(ctx, tx, req.Email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Return success even if user doesn't exist for security
+			return &dto.ForgotPasswordResponse{
+				Message: "If the email exists, a password reset link has been sent",
+			}, nil
+		}
+
+		s.logger.Error("forgot-password - service - failed to get user by email: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	// Generate reset token
+	token, err := helper.GenerateRandomToken(tokenLength)
+	if err != nil {
+		s.logger.Error("forgot-password - service - failed to generate reset token: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	// Create password reset record
+	_, err = s.repo.CreatePasswordReset(ctx, tx, repository.CreatePasswordResetParams{
+		UserID: user.ID,
+		Token:  token,
+	})
+	if err != nil {
+		s.logger.Error("forgot-password - service - failed to create password reset: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		s.logger.Error("forgot-password - service - failed to commit transaction: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	// Send reset email
+	go func() {
+		if err := s.mailService.SendPasswordResetEmail(user.Email, user.FullName.String, token); err != nil {
+			s.logger.Error("forgot-password - service - failed to send reset email: %w", err)
+		}
+	}()
+
+	return &dto.ForgotPasswordResponse{
+		Message: "If the email exists, a password reset link has been sent",
+	}, nil
+}
+
+func (s *authService) ResetPassword(ctx context.Context, req dto.ResetPasswordRequest) (*dto.ResetPasswordResponse, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		s.logger.Error("reset-password - service - failed to begin transaction: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+	defer func(tx pgx.Tx, ctx context.Context) {
+		err := tx.Rollback(ctx)
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			s.logger.Error("reset-password - service - failed to rollback transaction: %w", err)
+		}
+	}(tx, ctx)
+
+	resetRecord, err := s.repo.GetPasswordResetByToken(ctx, tx, req.Token)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.logger.Error("reset-password - service - invalid or expired token")
+
+			return nil, failure.BadRequestFromString("invalid or expired reset token")
+		}
+
+		s.logger.Error("reset-password - service - failed to get reset token: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		s.logger.Error("reset-password - service - failed to hash password: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	_, err = s.repo.ResetPassword(ctx, tx, repository.ResetPasswordParams{
+		Password: pgtype.Text{
+			String: string(hashedPassword),
+			Valid:  true,
+		},
+		ID: resetRecord.UserID,
+	})
+	if err != nil {
+		s.logger.Error("reset-password - service - failed to reset password: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		s.logger.Error("reset-password - service - failed to commit transaction: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	return &dto.ResetPasswordResponse{
+		Message: "Password reset successfully",
+	}, nil
+}
+
+func (s *authService) ValidateResetToken(ctx context.Context, req dto.ValidateResetTokenRequest) (*dto.ValidateResetTokenResponse, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		s.logger.Error("validate-reset-token - service - failed to begin transaction: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+	defer func(tx pgx.Tx, ctx context.Context) {
+		err := tx.Rollback(ctx)
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			s.logger.Error("validate-reset-token - service - failed to rollback transaction: %w", err)
+		}
+	}(tx, ctx)
+
+	_, err = s.repo.GetPasswordResetByToken(ctx, tx, req.Token)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return &dto.ValidateResetTokenResponse{
+				Valid:   false,
+				Message: "Invalid or expired reset token",
+			}, nil
+		}
+
+		s.logger.Error("validate-reset-token - service - failed to get reset token: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		s.logger.Error("validate-reset-token - service - failed to commit transaction: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	return &dto.ValidateResetTokenResponse{
+		Valid:   true,
+		Message: "Reset token is valid",
 	}, nil
 }
