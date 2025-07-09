@@ -96,6 +96,8 @@ type (
 	Xendit struct {
 		APIKey        string `env:"XENDIT_API_KEY,required"`
 		CallbackToken string `env:"XENDIT_CALLBACK_TOKEN,required"`
+		SuccessURL    string `env:"XENDIT_SUCCESS_URL,required"`
+		FailureURL    string `env:"XENDIT_FAILURE_URL,required"`
 	}
 
 	Supabase struct {

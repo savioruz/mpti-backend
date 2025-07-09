@@ -225,12 +225,6 @@ func (s *bookingService) CreateBooking(ctx context.Context, req dto.CreateBookin
 func (s *bookingService) GetBookingByID(ctx context.Context, id string) (res dto.BookingResponse, err error) {
 	bookingID := helper.PgUUID(id)
 
-	cacheKey := helper.BuildCacheKey(cacheGetBookingKey, id)
-
-	if err = s.cache.Get(ctx, cacheKey, &res); err == nil {
-		return res, nil
-	}
-
 	booking, err := s.repo.GetBookingById(ctx, s.db, bookingID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -253,12 +247,6 @@ func (s *bookingService) GetBookingByID(ctx context.Context, id string) (res dto
 	} else {
 		s.logger.Error(identifier, "error getting field name for ID %s: %w", booking.FieldID.String(), err)
 	}
-
-	go func() {
-		if err := s.cache.Save(context.WithoutCancel(ctx), cacheKey, res, s.cfg.Cache.Duration); err != nil {
-			s.logger.Error(identifier, "error saving booking to cache: "+err.Error())
-		}
-	}()
 
 	return res, nil
 }

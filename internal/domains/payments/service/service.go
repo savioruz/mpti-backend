@@ -64,6 +64,8 @@ func (s *paymentService) CreateInvoice(ctx context.Context, req dto.CreatePaymen
 	}
 
 	createInvoice := *invoice.NewCreateInvoiceRequest(req.OrderID, float64(req.Amount))
+	createInvoice.SuccessRedirectUrl = &s.cfg.Xendit.SuccessURL
+	createInvoice.FailureRedirectUrl = &s.cfg.Xendit.FailureURL
 
 	invoiceResult, _, erro := s.xendit.InvoiceApi.CreateInvoice(ctx).CreateInvoiceRequest(createInvoice).Execute()
 	if erro != nil {
