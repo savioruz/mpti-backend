@@ -101,6 +101,14 @@ func PgTimeFromTime(t time.Time) pgtype.Time {
 	}
 }
 
+func BoolFromPg(b pgtype.Bool) bool {
+	if !b.Valid {
+		return false
+	}
+
+	return b.Bool
+}
+
 // TimeFromString converts a time string (format "15:04") to a time.Time object
 func TimeFromString(s string) time.Time {
 	t, err := time.Parse(constant.HoursFormat, s)

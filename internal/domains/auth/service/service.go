@@ -168,6 +168,12 @@ func (s *authService) Login(ctx context.Context, req dto.UserLoginRequest) (*dto
 		return nil, failure.NotFound("user not found")
 	}
 
+	if !helper.BoolFromPg(user.IsVerified) {
+		s.logger.Error("login - service - user is not verified")
+
+		return nil, failure.BadRequestFromString("user is not verified")
+	}
+
 	if err = bcrypt.CompareHashAndPassword([]byte(user.Password.String), []byte(req.Password)); err != nil {
 		s.logger.Error("login - service - unauthorized")
 
