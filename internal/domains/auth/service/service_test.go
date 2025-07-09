@@ -18,6 +18,7 @@ import (
 	"github.com/savioruz/goth/pkg/failure"
 	"github.com/savioruz/goth/pkg/jwt"
 	log "github.com/savioruz/goth/pkg/logger/mock"
+	mail "github.com/savioruz/goth/pkg/mail/mock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -27,16 +28,8 @@ func init() {
 }
 
 func TestAuthService_Register(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	ctx := context.Background()
-	mockQuerier := mock.NewMockQuerier(ctrl)
-	mockPgx, _ := pgxmock.NewPool()
-	mockLogger := log.NewMockInterface(ctrl)
 	mockError := errors.New("error")
-
-	service := New(mockPgx, mockQuerier, mockLogger)
 
 	registerReq := dto.UserRegisterRequest{
 		Email:    "test@example.com",
@@ -56,6 +49,15 @@ func TestAuthService_Register(t *testing.T) {
 	}
 
 	t.Run("error: transaction begin failure", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockQuerier := mock.NewMockQuerier(ctrl)
+		mockPgx, _ := pgxmock.NewPool()
+		mockLogger := log.NewMockInterface(ctrl)
+		mockMail := mail.NewMockService(ctrl)
+		service := New(mockPgx, mockQuerier, mockLogger, mockMail)
+
 		mockLogger.EXPECT().Error(gomock.Any(), gomock.Any())
 		mockPgx.ExpectBegin().WillReturnError(mockError)
 
@@ -67,6 +69,15 @@ func TestAuthService_Register(t *testing.T) {
 	})
 
 	t.Run("error: failure getting user by email", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockQuerier := mock.NewMockQuerier(ctrl)
+		mockPgx, _ := pgxmock.NewPool()
+		mockLogger := log.NewMockInterface(ctrl)
+		mockMail := mail.NewMockService(ctrl)
+		service := New(mockPgx, mockQuerier, mockLogger, mockMail)
+
 		mockLogger.EXPECT().Error(gomock.Any(), gomock.Any())
 
 		mockPgx.ExpectBegin()
@@ -84,6 +95,15 @@ func TestAuthService_Register(t *testing.T) {
 	})
 
 	t.Run("error: user already exists", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockQuerier := mock.NewMockQuerier(ctrl)
+		mockPgx, _ := pgxmock.NewPool()
+		mockLogger := log.NewMockInterface(ctrl)
+		mockMail := mail.NewMockService(ctrl)
+		service := New(mockPgx, mockQuerier, mockLogger, mockMail)
+
 		mockLogger.EXPECT().Error(gomock.Any())
 
 		mockPgx.ExpectBegin()
@@ -101,6 +121,15 @@ func TestAuthService_Register(t *testing.T) {
 	})
 
 	t.Run("error: failure creating user", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockQuerier := mock.NewMockQuerier(ctrl)
+		mockPgx, _ := pgxmock.NewPool()
+		mockLogger := log.NewMockInterface(ctrl)
+		mockMail := mail.NewMockService(ctrl)
+		service := New(mockPgx, mockQuerier, mockLogger, mockMail)
+
 		mockLogger.EXPECT().Error(gomock.Any(), gomock.Any())
 
 		mockPgx.ExpectBegin()
@@ -121,9 +150,19 @@ func TestAuthService_Register(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, failure.GetCode(err))
 	})
 
-	t.Run("success: user registered", func(t *testing.T) {
+	t.Run("error: failure creating email verification", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockQuerier := mock.NewMockQuerier(ctrl)
+		mockPgx, _ := pgxmock.NewPool()
+		mockLogger := log.NewMockInterface(ctrl)
+		mockMail := mail.NewMockService(ctrl)
+		service := New(mockPgx, mockQuerier, mockLogger, mockMail)
+
+		mockLogger.EXPECT().Error(gomock.Any(), gomock.Any())
+
 		mockPgx.ExpectBegin()
-		mockPgx.ExpectCommit()
 		mockPgx.ExpectRollback()
 
 		mockQuerier.EXPECT().
@@ -134,7 +173,85 @@ func TestAuthService_Register(t *testing.T) {
 			CreateUser(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(mockUser, nil)
 
+		mockQuerier.EXPECT().
+			CreateEmailVerification(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(repository.EmailVerification{}, mockError)
+
+		res, err := service.Register(ctx, registerReq)
+
+		assert.Error(t, err)
+		assert.Nil(t, res)
+		assert.Equal(t, http.StatusInternalServerError, failure.GetCode(err))
+	})
+
+	t.Run("error: transaction commit failure", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockQuerier := mock.NewMockQuerier(ctrl)
+		mockPgx, _ := pgxmock.NewPool()
+		mockLogger := log.NewMockInterface(ctrl)
+		mockMail := mail.NewMockService(ctrl)
+		service := New(mockPgx, mockQuerier, mockLogger, mockMail)
+
+		mockLogger.EXPECT().Error(gomock.Any(), gomock.Any())
+
+		mockPgx.ExpectBegin()
+		mockPgx.ExpectRollback()
+
+		mockQuerier.EXPECT().
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			Return(repository.User{}, nil)
+
+		mockQuerier.EXPECT().
+			CreateUser(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(mockUser, nil)
+
+		mockQuerier.EXPECT().
+			CreateEmailVerification(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(repository.EmailVerification{}, nil)
+
+		mockPgx.ExpectCommit().WillReturnError(mockError)
+
+		res, err := service.Register(ctx, registerReq)
+
+		assert.Error(t, err)
+		assert.Nil(t, res)
+		assert.Equal(t, http.StatusInternalServerError, failure.GetCode(err))
+	})
+
+	t.Run("success: user registered", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockQuerier := mock.NewMockQuerier(ctrl)
+		mockPgx, _ := pgxmock.NewPool()
+		mockLogger := log.NewMockInterface(ctrl)
+		mockMail := mail.NewMockService(ctrl)
+		service := New(mockPgx, mockQuerier, mockLogger, mockMail)
+
+		mockPgx.ExpectBegin()
+
+		mockQuerier.EXPECT().
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			Return(repository.User{}, nil)
+
+		mockQuerier.EXPECT().
+			CreateUser(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(mockUser, nil)
+
+		mockQuerier.EXPECT().
+			CreateEmailVerification(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(repository.EmailVerification{}, nil)
+
 		mockPgx.ExpectCommit()
+		mockPgx.ExpectRollback() // For the deferred rollback function
+
+		// Mock the email service call (it runs in a goroutine)
+		mockMail.EXPECT().
+			SendVerificationEmail(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil).
+			AnyTimes()
 
 		res, err := service.Register(ctx, registerReq)
 
@@ -153,9 +270,10 @@ func TestAuthService_Login(t *testing.T) {
 	mockQuerier := mock.NewMockQuerier(ctrl)
 	mockPgx, _ := pgxmock.NewPool()
 	mockLogger := log.NewMockInterface(ctrl)
+	mockMail := mail.NewMockService(ctrl)
 	mockError := errors.New("error")
 
-	service := New(mockPgx, mockQuerier, mockLogger)
+	service := New(mockPgx, mockQuerier, mockLogger, mockMail)
 
 	loginReq := dto.UserLoginRequest{
 		Email:    "test@example.com",
@@ -272,7 +390,7 @@ func TestAuthService_Login(t *testing.T) {
 
 	t.Run("success: login", func(t *testing.T) {
 		mockPgx, _ = pgxmock.NewPool()
-		service = New(mockPgx, mockQuerier, mockLogger)
+		service = New(mockPgx, mockQuerier, mockLogger, mockMail)
 
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 

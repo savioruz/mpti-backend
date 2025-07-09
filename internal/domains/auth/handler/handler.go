@@ -28,6 +28,10 @@ func (h *Handler) RegisterRoutes(r fiber.Router) {
 
 	auth.Post("/register", h.Register)
 	auth.Post("/login", h.Login)
+	auth.Get("/verify-email", h.VerifyEmail) // GET with query parameter
+	auth.Post("/forgot-password", h.ForgotPassword)
+	auth.Get("/reset-password", h.ValidateResetToken) // GET to validate reset token
+	auth.Post("/reset-password", h.ResetPassword)     // POST to actually reset password
 }
 
 // Register godoc
@@ -103,6 +107,166 @@ func (h *Handler) Login(ctx *fiber.Ctx) error {
 		}
 
 		h.logger.Error("http - auth - login - request_id: " + reqID + " - " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	return response.WithJSON(ctx, fiber.StatusOK, data)
+}
+
+// VerifyEmail godoc
+// @Summary Verify email address
+// @Description Verify user's email address using verification token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param token query string true "Email verification token"
+// @Success 200 {object} response.Data[dto.EmailVerificationResponse]
+// @Failure 400 {object} response.Error
+// @Failure 500 {object} response.Error
+// @Router /auth/verify-email [get]
+func (h *Handler) VerifyEmail(ctx *fiber.Ctx) error {
+	var req dto.EmailVerificationRequest
+	if err := ctx.QueryParser(&req); err != nil {
+		h.logger.Error("http - auth - verify-email - query parsing error: " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	if err := h.validator.Struct(req); err != nil {
+		h.logger.Error("http - auth - verify-email - validate error: " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	data, err := h.service.VerifyEmail(ctx.UserContext(), req)
+	if err != nil {
+		reqID := "unknown"
+		if id, ok := ctx.Locals("request_id").(string); ok {
+			reqID = id
+		}
+
+		h.logger.Error("http - auth - verify-email - request_id: " + reqID + " - " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	return response.WithJSON(ctx, fiber.StatusOK, data)
+}
+
+// ForgotPassword godoc
+// @Summary Request password reset
+// @Description Send password reset email to user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param forgot body dto.ForgotPasswordRequest true "Forgot password request"
+// @Success 200 {object} response.Data[dto.ForgotPasswordResponse]
+// @Failure 400 {object} response.Error
+// @Failure 500 {object} response.Error
+// @Router /auth/forgot-password [post]
+func (h *Handler) ForgotPassword(ctx *fiber.Ctx) error {
+	var req dto.ForgotPasswordRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		h.logger.Error("http - auth - forgot-password - body parsing error: " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	if err := h.validator.Struct(req); err != nil {
+		h.logger.Error("http - auth - forgot-password - validate error: " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	data, err := h.service.ForgotPassword(ctx.UserContext(), req)
+	if err != nil {
+		reqID := "unknown"
+		if id, ok := ctx.Locals("request_id").(string); ok {
+			reqID = id
+		}
+
+		h.logger.Error("http - auth - forgot-password - request_id: " + reqID + " - " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	return response.WithJSON(ctx, fiber.StatusOK, data)
+}
+
+// ResetPassword godoc
+// @Summary Reset user password
+// @Description Reset user password using reset token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param reset body dto.ResetPasswordRequest true "Reset password request"
+// @Success 200 {object} response.Data[dto.ResetPasswordResponse]
+// @Failure 400 {object} response.Error
+// @Failure 500 {object} response.Error
+// @Router /auth/reset-password [post]
+func (h *Handler) ResetPassword(ctx *fiber.Ctx) error {
+	var req dto.ResetPasswordRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		h.logger.Error("http - auth - reset-password - body parsing error: " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	if err := h.validator.Struct(req); err != nil {
+		h.logger.Error("http - auth - reset-password - validate error: " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	data, err := h.service.ResetPassword(ctx.UserContext(), req)
+	if err != nil {
+		reqID := "unknown"
+		if id, ok := ctx.Locals("request_id").(string); ok {
+			reqID = id
+		}
+
+		h.logger.Error("http - auth - reset-password - request_id: " + reqID + " - " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	return response.WithJSON(ctx, fiber.StatusOK, data)
+}
+
+// ValidateResetToken godoc
+// @Summary Validate password reset token
+// @Description Validate if a password reset token is valid and not expired
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param token query string true "Password reset token"
+// @Success 200 {object} response.Data[dto.ValidateResetTokenResponse]
+// @Failure 400 {object} response.Error
+// @Failure 500 {object} response.Error
+// @Router /auth/reset-password [get]
+func (h *Handler) ValidateResetToken(ctx *fiber.Ctx) error {
+	var req dto.ValidateResetTokenRequest
+	if err := ctx.QueryParser(&req); err != nil {
+		h.logger.Error("http - auth - validate-reset-token - query parsing error: " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	if err := h.validator.Struct(req); err != nil {
+		h.logger.Error("http - auth - validate-reset-token - validate error: " + err.Error())
+
+		return response.WithError(ctx, err)
+	}
+
+	data, err := h.service.ValidateResetToken(ctx.UserContext(), req)
+	if err != nil {
+		reqID := "unknown"
+		if id, ok := ctx.Locals("request_id").(string); ok {
+			reqID = id
+		}
+
+		h.logger.Error("http - auth - validate-reset-token - request_id: " + reqID + " - " + err.Error())
 
 		return response.WithError(ctx, err)
 	}

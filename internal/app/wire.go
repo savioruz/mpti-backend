@@ -41,6 +41,7 @@ import (
 	"github.com/savioruz/goth/pkg/httpserver"
 	"github.com/savioruz/goth/pkg/jwt"
 	"github.com/savioruz/goth/pkg/logger"
+	"github.com/savioruz/goth/pkg/mail"
 	"github.com/savioruz/goth/pkg/oauth"
 	"github.com/savioruz/goth/pkg/postgres"
 	"github.com/savioruz/goth/pkg/redis"
@@ -138,6 +139,7 @@ func InitializeApp(cfg *config.Config) (*Application, error) {
 		provideJWT,
 		provideGoogleOAuth,
 		provideSupabaseClient,
+		provideMailService,
 
 		domains,
 
@@ -217,6 +219,18 @@ func provideSupabaseClient(cfg *config.Config, l logger.Interface) (*supabase.Cl
 		EndpointURL:     cfg.Supabase.EndpointURL,
 		Region:          cfg.Supabase.Region,
 		BucketName:      cfg.Supabase.BucketName,
+	})
+}
+
+func provideMailService(cfg *config.Config) mail.Service {
+	return mail.New(mail.Config{
+		SMTPHost:     cfg.Mail.SMTPHost,
+		SMTPPort:     cfg.Mail.SMTPPort,
+		SMTPUsername: cfg.Mail.SMTPUsername,
+		SMTPPassword: cfg.Mail.SMTPPassword,
+		FromEmail:    cfg.Mail.FromEmail,
+		FromName:     cfg.Mail.FromName,
+		TemplatePath: "template", // Default template path from project root
 	})
 }
 

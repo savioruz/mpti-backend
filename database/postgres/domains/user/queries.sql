@@ -12,7 +12,7 @@ UPDATE users SET email = $1, password = $2, google_id = $3, full_name = $4, prof
 UPDATE users SET last_login = now() WHERE id = $1 AND deleted_at IS NULL RETURNING id;
 
 -- name: CreateEmailVerification :one
-INSERT INTO email_verifications (user_id, token) VALUES ($1, $2) RETURNING *;
+INSERT INTO email_verifications (user_id, token, expires_at) VALUES ($1, $2, now() + interval '24 hours') RETURNING *;
 
 -- name: GetEmailVerificationByToken :one
 SELECT * FROM email_verifications WHERE token = $1 AND expires_at > now() LIMIT 1;
@@ -21,7 +21,7 @@ SELECT * FROM email_verifications WHERE token = $1 AND expires_at > now() LIMIT 
 UPDATE users SET is_verified = true WHERE id = $1 AND deleted_at IS NULL RETURNING *;
 
 -- name: CreatePasswordReset :one
-INSERT INTO password_resets (user_id, token) VALUES ($1, $2) RETURNING *;
+INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, now() + interval '1 hour') RETURNING *;
 
 -- name: GetPasswordResetByToken :one
 SELECT * FROM password_resets WHERE token = $1 AND expires_at > now() LIMIT 1;
