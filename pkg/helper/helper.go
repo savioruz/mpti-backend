@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/savioruz/goth/pkg/constant"
@@ -99,6 +100,39 @@ func IsValidImageType(contentType string) bool {
 
 	for _, validType := range validTypes {
 		if contentType == validType {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsAllowedEmailDomain checks if the email domain is from an allowed provider
+func IsAllowedEmailDomain(email string) bool {
+	allowedDomains := []string{
+		"gmail.com",
+		"googlemail.com",
+		"outlook.com",
+		"hotmail.com",
+		"live.com",
+		"yahoo.com",
+		"yahoo.co.uk",
+		"yahoo.co.id",
+		"yahoo.co.jp",
+		"icloud.com",
+	}
+
+	partLen := 2
+	parts := strings.Split(email, "@")
+
+	if len(parts) != partLen {
+		return false
+	}
+
+	domain := strings.ToLower(parts[1])
+
+	for _, allowedDomain := range allowedDomains {
+		if domain == allowedDomain {
 			return true
 		}
 	}

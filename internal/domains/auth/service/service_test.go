@@ -32,7 +32,7 @@ func TestAuthService_Register(t *testing.T) {
 	mockError := errors.New("error")
 
 	registerReq := dto.UserRegisterRequest{
-		Email:    "test@example.com",
+		Email:    "test@gmail.com",
 		Password: "password123",
 		Name:     "Test User",
 	}
@@ -40,7 +40,7 @@ func TestAuthService_Register(t *testing.T) {
 	mockID := uuid.New()
 	mockUser := repository.User{
 		ID:         pgtype.UUID{Bytes: mockID, Valid: true},
-		Email:      "test@example.com",
+		Email:      "test@gmail.com",
 		Password:   pgtype.Text{String: "hashedpassword", Valid: true},
 		Level:      "1",
 		FullName:   pgtype.Text{String: "Test User", Valid: true},
@@ -84,7 +84,7 @@ func TestAuthService_Register(t *testing.T) {
 		mockPgx.ExpectRollback()
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(repository.User{}, mockError)
 
 		res, err := service.Register(ctx, registerReq)
@@ -110,7 +110,7 @@ func TestAuthService_Register(t *testing.T) {
 		mockPgx.ExpectRollback()
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(mockUser, nil)
 
 		res, err := service.Register(ctx, registerReq)
@@ -136,7 +136,7 @@ func TestAuthService_Register(t *testing.T) {
 		mockPgx.ExpectRollback()
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(repository.User{}, nil)
 
 		mockQuerier.EXPECT().
@@ -166,7 +166,7 @@ func TestAuthService_Register(t *testing.T) {
 		mockPgx.ExpectRollback()
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(repository.User{}, nil)
 
 		mockQuerier.EXPECT().
@@ -200,7 +200,7 @@ func TestAuthService_Register(t *testing.T) {
 		mockPgx.ExpectRollback()
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(repository.User{}, nil)
 
 		mockQuerier.EXPECT().
@@ -233,7 +233,7 @@ func TestAuthService_Register(t *testing.T) {
 		mockPgx.ExpectBegin()
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(repository.User{}, nil)
 
 		mockQuerier.EXPECT().
@@ -258,7 +258,7 @@ func TestAuthService_Register(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, res)
 		assert.Equal(t, mockID.String(), res.ID)
-		assert.Equal(t, "test@example.com", res.Email)
+		assert.Equal(t, "test@gmail.com", res.Email)
 	})
 }
 
@@ -276,7 +276,7 @@ func TestAuthService_Login(t *testing.T) {
 	service := New(mockPgx, mockQuerier, mockLogger, mockMail)
 
 	loginReq := dto.UserLoginRequest{
-		Email:    "test@example.com",
+		Email:    "test@gmail.com",
 		Password: "password123",
 	}
 
@@ -284,7 +284,7 @@ func TestAuthService_Login(t *testing.T) {
 	mockUser := func(password string) repository.User {
 		return repository.User{
 			ID:         pgtype.UUID{Bytes: mockID, Valid: true},
-			Email:      "test@example.com",
+			Email:      "test@gmail.com",
 			Password:   pgtype.Text{String: password, Valid: true},
 			Level:      "1",
 			FullName:   pgtype.Text{String: "Test User", Valid: true},
@@ -314,7 +314,7 @@ func TestAuthService_Login(t *testing.T) {
 		mockPgx.ExpectRollback()
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(repository.User{}, mockError)
 
 		res, err := service.Login(ctx, loginReq)
@@ -331,7 +331,7 @@ func TestAuthService_Login(t *testing.T) {
 		mockPgx.ExpectRollback()
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(repository.User{}, nil)
 
 		res, err := service.Login(ctx, loginReq)
@@ -352,7 +352,7 @@ func TestAuthService_Login(t *testing.T) {
 		// IsVerified is already false in mockUser function
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(unverifiedUser, nil)
 
 		res, err := service.Login(ctx, loginReq)
@@ -374,7 +374,7 @@ func TestAuthService_Login(t *testing.T) {
 		_, _ = bcrypt.GenerateFromPassword([]byte("differentpassword"), bcrypt.DefaultCost)
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(invalidPasswordUser, nil)
 
 		res, err := service.Login(ctx, loginReq)
@@ -395,7 +395,7 @@ func TestAuthService_Login(t *testing.T) {
 		mockUserWithValidPassword.IsVerified = pgtype.Bool{Bool: true, Valid: true} // Make user verified
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(mockUserWithValidPassword, nil)
 
 		mockQuerier.EXPECT().
@@ -423,7 +423,7 @@ func TestAuthService_Login(t *testing.T) {
 		mockPgx.ExpectBegin()
 
 		mockQuerier.EXPECT().
-			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@gmail.com").
 			Return(mockUserWithValidPassword, nil)
 
 		mockQuerier.EXPECT().

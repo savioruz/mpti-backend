@@ -12,6 +12,13 @@ const (
 	x = 10
 )
 
+func PgBool(b bool) pgtype.Bool {
+	return pgtype.Bool{
+		Bool:  b,
+		Valid: true,
+	}
+}
+
 // PgString converts a string to pgtype.Text
 func PgString(s string) pgtype.Text {
 	return pgtype.Text{
