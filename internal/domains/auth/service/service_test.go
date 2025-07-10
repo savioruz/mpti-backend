@@ -341,14 +341,36 @@ func TestAuthService_Login(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, failure.GetCode(err))
 	})
 
+	t.Run("error: user not verified", func(t *testing.T) {
+		mockLogger.EXPECT().Error(gomock.Any(), gomock.Any())
+
+		mockPgx.ExpectBegin()
+		mockPgx.ExpectRollback()
+
+		// Create a user that is not verified
+		unverifiedUser := mockUser("hashedpassword")
+		// IsVerified is already false in mockUser function
+
+		mockQuerier.EXPECT().
+			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
+			Return(unverifiedUser, nil)
+
+		res, err := service.Login(ctx, loginReq)
+
+		assert.Error(t, err)
+		assert.Nil(t, res)
+		assert.Equal(t, http.StatusBadRequest, failure.GetCode(err))
+	})
+
 	t.Run("error: invalid password", func(t *testing.T) {
 		mockLogger.EXPECT().Error(gomock.Any(), gomock.Any())
 
 		mockPgx.ExpectBegin()
 		mockPgx.ExpectRollback()
 
-		// Create a user with a password that won't match
+		// Create a verified user with a password that won't match
 		invalidPasswordUser := mockUser("hashedpassword")
+		invalidPasswordUser.IsVerified = pgtype.Bool{Bool: true, Valid: true} // Make user verified
 		_, _ = bcrypt.GenerateFromPassword([]byte("differentpassword"), bcrypt.DefaultCost)
 
 		mockQuerier.EXPECT().
@@ -370,6 +392,7 @@ func TestAuthService_Login(t *testing.T) {
 
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 		mockUserWithValidPassword := mockUser(string(hashedPassword))
+		mockUserWithValidPassword.IsVerified = pgtype.Bool{Bool: true, Valid: true} // Make user verified
 
 		mockQuerier.EXPECT().
 			GetUserByEmail(gomock.Any(), gomock.Any(), "test@example.com").
@@ -395,6 +418,7 @@ func TestAuthService_Login(t *testing.T) {
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 
 		mockUserWithValidPassword := mockUser(string(hashedPassword))
+		mockUserWithValidPassword.IsVerified = pgtype.Bool{Bool: true, Valid: true} // Make user verified
 
 		mockPgx.ExpectBegin()
 
