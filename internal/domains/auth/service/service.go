@@ -49,6 +49,13 @@ const (
 )
 
 func (s *authService) Register(ctx context.Context, req dto.UserRegisterRequest) (res *dto.UserRegisterResponse, err error) {
+	// Validate email domain
+	if !helper.IsAllowedEmailDomain(req.Email) {
+		s.logger.Error("register - service - email domain not allowed: %s", req.Email)
+
+		return nil, failure.BadRequestFromString("email domain not allowed. Please use a valid email provider like Gmail, Outlook, Yahoo, or iCloud")
+	}
+
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		s.logger.Error("register - service - failed to begin transaction: %w", err)
@@ -83,20 +90,11 @@ func (s *authService) Register(ctx context.Context, req dto.UserRegisterRequest)
 	}
 
 	newUser, err := s.repo.CreateUser(ctx, tx, repository.CreateUserParams{
-		Email: req.Email,
-		Password: pgtype.Text{
-			String: string(password),
-			Valid:  true,
-		},
-		Level: constant.UserRoleUser,
-		FullName: pgtype.Text{
-			String: req.Name,
-			Valid:  true,
-		},
-		IsVerified: pgtype.Bool{
-			Bool:  false,
-			Valid: true,
-		},
+		Email:      req.Email,
+		Password:   helper.PgString(string(password)),
+		Level:      constant.UserRoleUser,
+		FullName:   helper.PgString(req.Name),
+		IsVerified: helper.PgBool(false),
 	})
 	if err != nil {
 		s.logger.Error("register - service - failed to create user: %w", err)
@@ -168,7 +166,8 @@ func (s *authService) Login(ctx context.Context, req dto.UserLoginRequest) (*dto
 		return nil, failure.NotFound("user not found")
 	}
 
-	if !helper.BoolFromPg(user.IsVerified) {
+	// Check if user is verified (skip verification for Google OAuth users)
+	if !helper.BoolFromPg(user.IsVerified) && !user.GoogleID.Valid {
 		s.logger.Error("login - service - user is not verified")
 
 		return nil, failure.BadRequestFromString("user is not verified")
@@ -179,8 +178,6 @@ func (s *authService) Login(ctx context.Context, req dto.UserLoginRequest) (*dto
 
 		return nil, failure.Unauthorized("unauthorized")
 	}
-
-	// TODO: check if user is verified
 
 	_, err = s.repo.UpdateLastLogin(ctx, tx, user.ID)
 	if err != nil {
@@ -288,6 +285,13 @@ func (s *authService) ForgotPassword(ctx context.Context, req dto.ForgotPassword
 		return nil, failure.InternalError(err)
 	}
 
+	// Check if user is a Google OAuth user
+	if user.GoogleID.Valid && user.GoogleID.String != "" {
+		s.logger.Error("forgot-password - service - cannot reset password for Google OAuth user")
+
+		return nil, failure.BadRequestFromString("cannot reset password for Google OAuth account")
+	}
+
 	// Generate reset token
 	token, err := helper.GenerateRandomToken(tokenLength)
 	if err != nil {
@@ -352,6 +356,20 @@ func (s *authService) ResetPassword(ctx context.Context, req dto.ResetPasswordRe
 		return nil, failure.InternalError(err)
 	}
 
+	// Check if the user is a Google OAuth user
+	user, err := s.repo.GetUserByID(ctx, tx, resetRecord.UserID)
+	if err != nil {
+		s.logger.Error("reset-password - service - failed to get user: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	if user.GoogleID.Valid && user.GoogleID.String != "" {
+		s.logger.Error("reset-password - service - cannot reset password for Google OAuth user")
+
+		return nil, failure.BadRequestFromString("cannot reset password for Google OAuth account")
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		s.logger.Error("reset-password - service - failed to hash password: %w", err)
@@ -397,7 +415,7 @@ func (s *authService) ValidateResetToken(ctx context.Context, req dto.ValidateRe
 		}
 	}(tx, ctx)
 
-	_, err = s.repo.GetPasswordResetByToken(ctx, tx, req.Token)
+	resetRecord, err := s.repo.GetPasswordResetByToken(ctx, tx, req.Token)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return &dto.ValidateResetTokenResponse{
@@ -409,6 +427,21 @@ func (s *authService) ValidateResetToken(ctx context.Context, req dto.ValidateRe
 		s.logger.Error("validate-reset-token - service - failed to get reset token: %w", err)
 
 		return nil, failure.InternalError(err)
+	}
+
+	// Check if the user is a Google OAuth user
+	user, err := s.repo.GetUserByID(ctx, tx, resetRecord.UserID)
+	if err != nil {
+		s.logger.Error("validate-reset-token - service - failed to get user: %w", err)
+
+		return nil, failure.InternalError(err)
+	}
+
+	if user.GoogleID.Valid && user.GoogleID.String != "" {
+		return &dto.ValidateResetTokenResponse{
+			Valid:   false,
+			Message: "Cannot reset password for Google OAuth account",
+		}, nil
 	}
 
 	if err = tx.Commit(ctx); err != nil {
