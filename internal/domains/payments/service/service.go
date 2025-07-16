@@ -191,9 +191,14 @@ func (s *paymentService) Callbacks(ctx context.Context, req dto.CallbackPaymentI
 		return failure.InternalError(err)
 	}
 
+	var bookingStatus string
+	if req.Status == constant.PaymentStatusPaid {
+		bookingStatus = constant.BookingStatusConfirmed
+	}
+
 	if err = s.bookingRepo.UpdateBookingStatus(ctx, tx, bookingRepository.UpdateBookingStatusParams{
 		ID:     helper.PgUUID(req.ExternalID),
-		Status: req.Status,
+		Status: bookingStatus,
 	}); err != nil {
 		s.logger.Error(identifier, " - Callbacks - failed to update booking status: %v", err)
 

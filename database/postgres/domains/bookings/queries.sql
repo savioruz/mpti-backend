@@ -10,7 +10,7 @@ SELECT * FROM bookings WHERE id = $1 AND deleted_at IS NULL LIMIT 1;
 SELECT COUNT(*) FROM bookings
 WHERE field_id = $1
   AND booking_date = $2
-  AND status IN ('PENDING', 'CONFIRMED')
+  AND status IN ('PENDING', 'CONFIRMED', 'PAID')
   AND (start_time, end_time) OVERLAPS ($3::time, $4::time)
   AND deleted_at IS NULL;
 
