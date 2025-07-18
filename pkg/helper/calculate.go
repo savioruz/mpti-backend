@@ -1,7 +1,10 @@
 package helper
 
 import (
+	"fmt"
 	"time"
+
+	"github.com/savioruz/goth/pkg/constant"
 )
 
 func CalculateOffset(page, limit int) int {
@@ -30,4 +33,9 @@ func CalculateTotalPrice(pricePerHour int64, durationHours int) int64 {
 	}
 
 	return pricePerHour * int64(durationHours)
+}
+
+// FormatAmountFromCents converts amount from cents to formatted string with 2 decimal places
+func FormatAmountFromCents(amountInCents int64) string {
+	return fmt.Sprintf("%.2f", float64(amountInCents)/constant.CentsToUnit)
 }

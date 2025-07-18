@@ -51,6 +51,7 @@ const (
 	SecondsPerHour     = 3600
 	MinutesPerHour     = 60
 	MicrosecondsPerSec = 1000000
+	CentsToUnit        = 100
 )
 
 const (

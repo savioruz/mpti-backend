@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
@@ -10,10 +12,12 @@ import (
 	bookingRepository "github.com/savioruz/goth/internal/domains/bookings/repository"
 	"github.com/savioruz/goth/internal/domains/payments/dto"
 	"github.com/savioruz/goth/internal/domains/payments/repository"
+	userRepository "github.com/savioruz/goth/internal/domains/user/repository"
 	"github.com/savioruz/goth/pkg/constant"
 	"github.com/savioruz/goth/pkg/failure"
 	"github.com/savioruz/goth/pkg/helper"
 	"github.com/savioruz/goth/pkg/logger"
+	"github.com/savioruz/goth/pkg/mail"
 	"github.com/savioruz/goth/pkg/postgres"
 	"github.com/savioruz/goth/pkg/redis"
 	"github.com/xendit/xendit-go/v7"
@@ -32,23 +36,27 @@ type paymentService struct {
 	db          postgres.PgxIface
 	repo        repository.Querier
 	bookingRepo bookingRepository.Querier
+	userRepo    userRepository.Querier
 	cache       redis.IRedisCache
 	cfg         *config.Config
 	logger      logger.Interface
 	xendit      *xendit.APIClient
 	validator   *validator.Validate
+	mailService mail.Service
 }
 
-func New(db postgres.PgxIface, r repository.Querier, b bookingRepository.Querier, c redis.IRedisCache, cfg *config.Config, l logger.Interface) PaymentService {
+func New(db postgres.PgxIface, r repository.Querier, b bookingRepository.Querier, u userRepository.Querier, c redis.IRedisCache, cfg *config.Config, l logger.Interface, m mail.Service) PaymentService {
 	return &paymentService{
 		db:          db,
 		repo:        r,
 		bookingRepo: b,
+		userRepo:    u,
 		cache:       c,
 		cfg:         cfg,
 		logger:      l,
 		xendit:      xendit.NewClient(cfg.Xendit.APIKey),
 		validator:   validator.New(),
+		mailService: m,
 	}
 }
 
@@ -217,6 +225,15 @@ func (s *paymentService) Callbacks(ctx context.Context, req dto.CallbackPaymentI
 
 	s.logger.Info(identifier, " - Callbacks - payment status updated successfully for booking ID: %s", req.ExternalID)
 
+	// Send booking confirmation email if payment is successful
+	if req.Status == constant.PaymentStatusPaid {
+		go func() {
+			if err := s.sendBookingConfirmationEmail(ctx, req.ExternalID, *paymentMethod); err != nil {
+				s.logger.Error(identifier, " - Callbacks - failed to send booking confirmation email: %v", err)
+			}
+		}()
+	}
+
 	return nil
 }
 
@@ -315,4 +332,38 @@ func (s *paymentService) GetPaymentsByBookingID(ctx context.Context, bookingID s
 	}
 
 	return paymentResponses, nil
+}
+
+// sendBookingConfirmationEmail sends confirmation email after successful payment
+func (s *paymentService) sendBookingConfirmationEmail(ctx context.Context, bookingID, paymentMethod string) error {
+	// Get booking details
+	booking, err := s.bookingRepo.GetBookingById(ctx, s.db, helper.PgUUID(bookingID))
+	if err != nil {
+		return fmt.Errorf("failed to get booking details: %w", err)
+	}
+
+	// Get user details
+	user, err := s.userRepo.GetUserByID(ctx, s.db, booking.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to get user details: %w", err)
+	}
+
+	// Prepare email data
+	startTime, _ := helper.PgTimeToString(booking.StartTime)
+	endTime, _ := helper.PgTimeToString(booking.EndTime)
+
+	emailData := mail.BookingConfirmationData{
+		CustomerName:     user.FullName.String,
+		BookingID:        bookingID,
+		Status:           constant.BookingStatusConfirmed,
+		BookingDate:      booking.BookingDate.Time.Format("2006-01-02"),
+		StartTime:        startTime,
+		EndTime:          endTime,
+		TotalAmount:      helper.FormatAmountFromCents(booking.TotalPrice.Int.Int64()),
+		PaymentMethod:    paymentMethod,
+		ConfirmationDate: time.Now().Format("2006-01-02 15:04:05"),
+	}
+
+	// Send email
+	return s.mailService.SendBookingConfirmationEmail(user.Email, emailData)
 }

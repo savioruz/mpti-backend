@@ -22,15 +22,30 @@ type Config struct {
 	TemplatePath string // Path to the templates directory
 }
 
+// BookingConfirmationData represents the data for booking confirmation email
+type BookingConfirmationData struct {
+	CustomerName     string
+	BookingID        string
+	Status           string
+	BookingDate      string
+	StartTime        string
+	EndTime          string
+	TotalAmount      string
+	PaymentMethod    string
+	ConfirmationDate string
+}
+
 type Service interface {
 	SendVerificationEmail(to, name, token string) error
 	SendPasswordResetEmail(to, name, token string) error
+	SendBookingConfirmationEmail(to string, data BookingConfirmationData) error
 }
 
 type service struct {
-	config                Config
-	verificationTemplate  *template.Template
-	passwordResetTemplate *template.Template
+	config                      Config
+	verificationTemplate        *template.Template
+	passwordResetTemplate       *template.Template
+	bookingConfirmationTemplate *template.Template
 }
 
 func New(config Config) Service {
@@ -51,10 +66,16 @@ func New(config Config) Service {
 		panic(fmt.Sprintf("failed to parse password reset template: %v", err))
 	}
 
+	bookingConfirmationTemplate, err := template.ParseFiles(filepath.Join(templatePath, "booking_confirmation.html"))
+	if err != nil {
+		panic(fmt.Sprintf("failed to parse booking confirmation template: %v", err))
+	}
+
 	return &service{
-		config:                config,
-		verificationTemplate:  verificationTemplate,
-		passwordResetTemplate: passwordResetTemplate,
+		config:                      config,
+		verificationTemplate:        verificationTemplate,
+		passwordResetTemplate:       passwordResetTemplate,
+		bookingConfirmationTemplate: bookingConfirmationTemplate,
 	}
 }
 
@@ -97,6 +118,18 @@ func (s *service) SendPasswordResetEmail(to, name, token string) error {
 	var body bytes.Buffer
 	if err := s.passwordResetTemplate.Execute(&body, data); err != nil {
 		return fmt.Errorf("failed to execute password reset template: %w", err)
+	}
+
+	return s.sendEmail(to, subject, body.String())
+}
+
+func (s *service) SendBookingConfirmationEmail(to string, data BookingConfirmationData) error {
+	subject := "Booking Confirmation - Payment Successful"
+
+	// Execute template
+	var body bytes.Buffer
+	if err := s.bookingConfirmationTemplate.Execute(&body, data); err != nil {
+		return fmt.Errorf("failed to execute booking confirmation template: %w", err)
 	}
 
 	return s.sendEmail(to, subject, body.String())
